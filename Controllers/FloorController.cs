@@ -1,7 +1,7 @@
-﻿using DemoMongo.Services;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Models;          
+using SmartBoardingHouse.Models;
+using SmartBoardingHouse.Services;
 
 namespace SmartBoardingHouse.Controllers
 {

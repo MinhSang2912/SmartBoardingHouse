@@ -27,5 +27,11 @@
             Completed = 2,
             Canceled = 3
         }
+
+        public enum  Role 
+        {
+            Owner = 0,
+            Tenant = 1,
+        }
     }
 }

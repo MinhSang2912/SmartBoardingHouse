@@ -1,4 +1,4 @@
-﻿using DemoMongo.Services;
+﻿using SmartBoardingHouse.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +11,9 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 var mongoService = app.Services.GetRequiredService<MongoDbService>();
+var dataSeeder = new DataSeeder(mongoService.GetDatabase());
+await dataSeeder.SeedAsync();
 
-Console.WriteLine("Kết nối MongoDB thành công!");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
