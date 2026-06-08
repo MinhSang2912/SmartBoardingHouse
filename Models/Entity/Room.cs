@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using SmartBoardingHouse.Common;
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
@@ -18,10 +19,12 @@ namespace SmartBoardingHouse.Models.Entity
     {
         public RoomValidation()
         {
-            RuleFor(x => x.RoomNumber).NotEmpty().WithMessage("Room number is required.");
-            RuleFor(x => x.Price).GreaterThan(0).WithMessage("Price must be greater than 0.");
-            RuleFor(x => x.Area).GreaterThan(0).WithMessage("Area must be greater than 0.");
-            RuleFor(x => x.RoomDeposit).GreaterThanOrEqualTo(0).WithMessage("Room deposit must be greater than or equal to 0.");
+            RuleFor(x => x.RoomNumber).NotEmpty().WithMessage(Message.RoomNumberIsRequired());
+            RuleFor(x => x.Price).GreaterThan(0).WithMessage(Message.RoomPriceMustBeGreaterThanZero());
+            RuleFor(x => x.Area).GreaterThan(0).WithMessage(Message.RoomAreaMustBeGreaterThanZero());
+            RuleFor(x => x.RoomDeposit).GreaterThanOrEqualTo(0).WithMessage(Message.RoomDepositMustBeNonNegative());
+            RuleFor(x => x.FloorId).GreaterThan(0).WithMessage(Message.RoomFloorIdIsRequired());
+            RuleFor(x => x.Status).IsInEnum().WithMessage(Message.RoomStatusIsInvalid());
         }
     }
 }

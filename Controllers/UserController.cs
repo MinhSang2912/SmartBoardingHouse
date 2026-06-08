@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 
@@ -32,7 +33,7 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<User>> GetById(int id)
         {
             var user = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            return user is null ? NotFound() : Ok(user);
+            return user is null ? NotFound(Message.NotFound("User")) : Ok(user);
         }
 
         // POST: api/Users
@@ -40,8 +41,17 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<User>> Create(User user)
         {
             var validationResult = await _validator.ValidateAsync(user);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors);
+            var errors = validationResult.Errors
+                                .Select(e => e.ErrorMessage)
+                                .ToList();
+
+            // Kiểm tra Id đã tồn tại
+            var idExists = await _collection.Find(x => x.Id == user.Id).AnyAsync();
+            if (idExists)
+                errors.Add(Message.IdExists("User", user.Id));
+
+            if (errors.Any())
+                return BadRequest(errors);
 
             await _collection.InsertOneAsync(user);
             return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
@@ -51,12 +61,20 @@ namespace SmartBoardingHouse.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<User>> Update(int id, User updatedUser)
         {
+            
             var validationResult = await _validator.ValidateAsync(updatedUser);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors);
+            var errors = validationResult.Errors
+                                .Select(e => e.ErrorMessage)
+                                .ToList();
+
+            if (errors.Any())
+                return BadRequest(errors);
 
             var result = await _collection.ReplaceOneAsync(x => x.Id == id, updatedUser);
-            return result.ModifiedCount > 0 ? Ok(updatedUser) : NotFound();
+
+            return result.ModifiedCount > 0
+                ? Ok(updatedUser)
+                : NotFound(Message.NotFound("User"));
         }
 
         // DELETE: api/Users/{id}
@@ -64,7 +82,9 @@ namespace SmartBoardingHouse.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var result = await _collection.DeleteOneAsync(x => x.Id == id);
-            return result.DeletedCount > 0 ? NoContent() : NotFound();
+            return result.DeletedCount > 0
+                ? Ok(Message.Deleted("User"))
+                : NotFound(Message.NotFound("User"));
         }
     }
 }

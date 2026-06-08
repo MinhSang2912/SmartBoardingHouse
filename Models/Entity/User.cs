@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using SmartBoardingHouse.Common;
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
@@ -11,7 +12,7 @@ namespace SmartBoardingHouse.Models.Entity
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string IDCardNumber { get; set; } = string.Empty;
-        public string RoomName { get; set; } = string.Empty;
+        public string RoomNumber { get; set; } = string.Empty;
        
     }
 
@@ -19,11 +20,13 @@ namespace SmartBoardingHouse.Models.Entity
     {
         public UserValidation()
         {
-            RuleFor(x => x.Name).NotEmpty().WithMessage("Name is required.");
-            RuleFor(x => x.Role).NotEmpty().WithMessage("Role is required.");
-            RuleFor(x => x.Email).NotEmpty().EmailAddress().WithMessage("Valid email is required.");
-            RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage("Phone number is required.");
-            RuleFor(x => x.IDCardNumber).NotEmpty().WithMessage("ID card number is required.");
+            RuleFor(x => x.Id).NotEmpty().WithMessage(Message.UserIdIsRequired());
+            RuleFor(x => x.Name).NotEmpty().WithMessage(Message.UserNameIsRequired());
+            RuleFor(x => x.Password).NotEmpty().WithMessage(Message.UserPasswordIsRequired());
+            RuleFor(x => x.Role).NotEmpty().WithMessage(Message.UserRoleIsRequired());
+            RuleFor(x => x.Role).IsInEnum().WithMessage(Message.UserRoleIsInvalid());
+            RuleFor(x => x.IDCardNumber).NotEmpty().WithMessage(Message.UserIDCardNumberIsRequired());
+            RuleFor(x => x.IDCardNumber).MinimumLength(10).WithMessage(Message.UserIDCardNumberIsTooShort());
         }
     }
 }

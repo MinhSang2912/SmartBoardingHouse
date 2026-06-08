@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using SmartBoardingHouse.Common;
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
@@ -19,11 +20,28 @@ namespace SmartBoardingHouse.Models.Entity
     {
         public ContractValidation()
         {
-            RuleFor(x => x.ContractNumber).NotEmpty().WithMessage("Contract number is required.");
-            RuleFor(x => x.RoomNumber).NotEmpty().WithMessage("Room number is required.");
-            RuleFor(x => x.TenantName).NotEmpty().WithMessage("Tenant name is required.");
-            RuleFor(x => x.StartDate).LessThan(x => x.EndDate).WithMessage("Start date must be before end date.");
-            RuleFor(x => x.PaymentDate).InclusiveBetween(1, 31).WithMessage("Payment date must be between 1 and 31.");
+            RuleFor(x => x.ContractNumber)
+                .NotEmpty().WithMessage(Message.ContractNumberIsRequired());
+
+            RuleFor(x => x.RoomNumber)
+                .NotEmpty().WithMessage(Message.ContractRoomNumberIsRequired());
+
+            RuleFor(x => x.TenantName)
+                .NotEmpty().WithMessage(Message.ContractTenantNameIsRequired());
+
+            RuleFor(x => x.StartDate)
+                .NotEmpty().WithMessage(Message.ContractStartDateIsRequired())
+                .LessThan(x => x.EndDate).WithMessage(Message.ContractStartDateMustBeBeforeEndDate());
+
+            RuleFor(x => x.EndDate)
+                .NotEmpty().WithMessage(Message.ContractEndDateIsRequired())
+                .GreaterThan(x => x.StartDate).WithMessage(Message.ContractEndDateMustBeAfterStartDate());
+
+            RuleFor(x => x.PaymentDate)
+                .InclusiveBetween(1, 31).WithMessage(Message.ContractPaymentDateIsInvalid());
+
+            RuleFor(x => x.Status)
+                .IsInEnum().WithMessage(Message.ContractStatusIsInvalid());
         }
     }
 }

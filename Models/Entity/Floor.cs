@@ -1,9 +1,7 @@
 ﻿using FluentValidation;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
-using SmartBoardingHouse.Models.Entity;
+using SmartBoardingHouse.Common;
 
-namespace SmartBoardingHouse.Models
+namespace SmartBoardingHouse.Models.Entity
 {
     public class Floor : BaseModel
     {
@@ -15,8 +13,8 @@ namespace SmartBoardingHouse.Models
     {
         public FloorValidation()
         {
-            RuleFor(x => x.FloorNumber).NotEmpty().WithMessage("Floor number is required.");
-            RuleFor(x => x.RoomCount).GreaterThanOrEqualTo(0).WithMessage("Room count must be greater than or equal to 0.");
+            RuleFor(x => x.FloorNumber).NotEmpty().WithMessage(Message.FloorNumberIsRequired());
+            RuleFor(x => x.RoomCount).GreaterThanOrEqualTo(0).WithMessage(Message.FloorRoomCountMustBeNonNegative());
         }
     }
 }

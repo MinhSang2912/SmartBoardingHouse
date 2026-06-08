@@ -79,7 +79,7 @@ namespace SmartBoardingHouse.Data
                 // 5. Seed Invoices
                 var invoices = new List<Invoice> {
                     new Invoice {
-                        Id = 1, RoomName = "P101", Amount = 2000000,
+                        Id = 1, RoomNumber = "P101", Amount = 2000000,
                         DueDate = DateTime.Now.AddDays(7), Status = InvoiceStatus.Unpaid
                     }
                 };

@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 
@@ -32,7 +33,7 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<Room>> GetById(int id)
         {
             var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            return room is null ? NotFound() : Ok(room);
+            return room is null ? NotFound(Message.NotFound("Room")) : Ok(room);
         }
 
         // POST: api/Rooms
@@ -40,8 +41,19 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<Room>> Create(Room room)
         {
             var validationResult = await _validator.ValidateAsync(room);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors);
+            var errors = validationResult.Errors
+                                .Select(e => e.ErrorMessage)
+                                .ToList();
+
+            var roomNumberExists = await _collection
+                .Find(x => x.RoomNumber == room.RoomNumber)
+                .AnyAsync();
+
+            if (roomNumberExists)
+                errors.Add(Message.RoomNumberExists(room.RoomNumber));
+
+            if (errors.Any())
+                return BadRequest(errors);
 
             await _collection.InsertOneAsync(room);
             return CreatedAtAction(nameof(GetById), new { id = room.Id }, room);
@@ -51,12 +63,24 @@ namespace SmartBoardingHouse.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<Room>> Update(int id, Room updatedRoom)
         {
+            if (updatedRoom.Id != id)
+            {
+                return BadRequest(new List<string> { "Id in URL and body must match." });
+            }
+
             var validationResult = await _validator.ValidateAsync(updatedRoom);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors);
+            var errors = validationResult.Errors
+                                .Select(e => e.ErrorMessage)
+                                .ToList();
+
+            if (errors.Any())
+                return BadRequest(errors);
 
             var result = await _collection.ReplaceOneAsync(x => x.Id == id, updatedRoom);
-            return result.ModifiedCount > 0 ? Ok(updatedRoom) : NotFound();
+
+            return result.ModifiedCount > 0
+                ? Ok(updatedRoom)
+                : NotFound(Message.NotFound("Room"));
         }
 
         // DELETE: api/Rooms/{id}
@@ -64,7 +88,9 @@ namespace SmartBoardingHouse.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var result = await _collection.DeleteOneAsync(x => x.Id == id);
-            return result.DeletedCount > 0 ? NoContent() : NotFound();
+            return result.DeletedCount > 0
+                ? Ok(Message.Deleted("Room"))
+                : NotFound(Message.NotFound("Room"));
         }
     }
 }
