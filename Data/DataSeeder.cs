@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using static SmartBoardingHouse.Common.Enums;
 
-namespace SmartBoardingHouse.Services
+namespace SmartBoardingHouse.Data
 {
     public class DataSeeder
     {

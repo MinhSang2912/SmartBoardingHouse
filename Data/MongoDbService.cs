@@ -1,6 +1,6 @@
 ﻿using MongoDB.Driver;
 
-namespace SmartBoardingHouse.Services
+namespace SmartBoardingHouse.Data
 {
     public class MongoDbService
     {
