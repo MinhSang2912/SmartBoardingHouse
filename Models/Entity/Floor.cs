@@ -9,12 +9,5 @@ namespace SmartBoardingHouse.Models.Entity
         public int RoomCount { get; set; }
     }
 
-    public class FloorValidation : AbstractValidator<Floor>
-    {
-        public FloorValidation()
-        {
-            RuleFor(x => x.FloorNumber).NotEmpty().WithMessage(Message.FloorNumberIsRequired());
-            RuleFor(x => x.RoomCount).GreaterThanOrEqualTo(0).WithMessage(Message.FloorRoomCountMustBeNonNegative());
-        }
-    }
+    
 }

@@ -10,6 +10,7 @@ namespace SmartBoardingHouse.Models.Entity
         public string TenantName { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public PriotyRequest Priority { get; set; } = PriotyRequest.Low;
         public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Pending;
     }
 
@@ -21,7 +22,7 @@ namespace SmartBoardingHouse.Models.Entity
                 .NotEmpty().WithMessage(Message.MaintenanceRoomNumberIsRequired());
 
             RuleFor(x => x.TenantName)
-                .NotEmpty().WithMessage(Message.MaintenanceTenantNameIsRequired())
+                .NotEmpty().WithMessage(Message.MaintenanceTenantNameIsRequired());
 
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage(Message.MaintenanceTitleIsRequired())

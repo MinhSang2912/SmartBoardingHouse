@@ -1,9 +1,13 @@
-﻿using FluentValidation;
+﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
+using SmartBoardingHouse.Models.Request;
+using SmartBoardingHouse.Models.Response;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -11,87 +15,125 @@ namespace SmartBoardingHouse.Controllers
     [Route("api/[controller]")]
     public class FloorsController : ControllerBase
     {
-        private readonly IMongoCollection<Floor> _collection;
-        private readonly IValidator<Floor> _validator;
+        private readonly IMongoCollection<Floor> _floorCollection;
+        private readonly IMongoCollection<Room> _roomCollection;
+        private readonly IValidator<FloorRequest> _validator;
+        private readonly IMapper _mapper;
 
-        public FloorsController(MongoDbService mongoService, IValidator<Floor> validator)
+        public FloorsController(MongoDbService mongoService, IValidator<FloorRequest> validator, IMapper mapper)
         {
-            _collection = mongoService.GetDatabase().GetCollection<Floor>("Floors");
+            _floorCollection = mongoService.GetDatabase().GetCollection<Floor>("Floors");
+            _roomCollection = mongoService.GetDatabase().GetCollection<Room>("Rooms");
             _validator = validator;
+            _mapper = mapper;
         }
 
         // GET: api/Floors
         [HttpGet]
-        public async Task<ActionResult<List<Floor>>> GetAll()
+        public async Task<ActionResult<FloorResponse>> GetAll()
         {
-            var floors = await _collection.Find(_ => true).ToListAsync();
-            return Ok(floors);
+            var floors = await _floorCollection.Find(_ => true).ToListAsync();
+            var rooms = await _roomCollection.Find(_ => true).ToListAsync();
+
+            var floorItems = floors.Select(floor =>
+            {
+                // So sánh Id của Floor với FloorId của Room
+                var roomsOnFloor = rooms.Where(r => r.FloorId == floor.Id).ToList();
+
+                var occupiedRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Occupied);
+                var emptyRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Available);
+
+                return new FloorItemResponse
+                {
+                    Id = floor.Id,
+                    FloorNumber = floor.FloorNumber,
+                    RoomCount = roomsOnFloor.Count,
+                    OccupiedRooms = occupiedRooms,
+                    EmptyRooms = emptyRooms,
+                    RevenueOnFloor = roomsOnFloor
+                        .Where(r => r.Status == RoomStatus.Occupied)
+                        .Sum(r => r.Price)
+                };
+            }).ToList();
+
+            var response = new FloorResponse
+            {
+                TotalFloors = floors.Count,
+                TotalRooms = rooms.Count,
+                MonthlyRevenue = floorItems.Sum(f => f.RevenueOnFloor),
+                Floors = floorItems
+            };
+
+            return Ok(response);
         }
 
         // GET: api/Floors/{id}
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Floor>> GetById(int id)
-        {
-            var floor = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            return floor is null ? NotFound(Message.NotFound("Floor")) : Ok(floor);
-        }
+        //[HttpGet("{id}")]
+        //public async Task<ActionResult<Floor>> GetById(int id)
+        //{
+        //    var floor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
+        //    return floor is null ? NotFound(Message.NotFound("Floor")) : Ok(floor);
+        //}
 
         // POST: api/Floors
         [HttpPost]
-        public async Task<ActionResult<Floor>> Create(Floor floor)
+        public async Task<ActionResult<Floor>> Create(FloorRequest request)
         {
-            var validationResult = await _validator.ValidateAsync(floor);
+            var validationResult = await _validator.ValidateAsync(request);
             var errors = validationResult.Errors
                                 .Select(e => e.ErrorMessage)
                                 .ToList();
 
-            // Kiểm tra FloorNumber đã tồn tại chưa
-            var floorNumberExists = await _collection
-                .Find(x => x.FloorNumber == floor.FloorNumber)
+            var floorNumberExists = await _floorCollection
+                .Find(x => x.FloorNumber == request.FloorNumber)
                 .AnyAsync();
 
             if (floorNumberExists)
-                errors.Add(Message.FloorNumberExists(floor.FloorNumber));
+                errors.Add(Message.FloorNumberExists(request.FloorNumber));
 
             if (errors.Any())
                 return BadRequest(errors);
 
-            await _collection.InsertOneAsync(floor);
-            return CreatedAtAction(nameof(GetById), new { id = floor.Id }, floor);
+            var floor = _mapper.Map<Floor>(request);
+            floor.Id = await MongoIdHelper.GetNextIdAsync(_floorCollection);
+            floor.CreatedAt = DateTime.UtcNow;
+
+            await _floorCollection.InsertOneAsync(floor);
+
+            return Ok(Message.Created("Floor"));
         }
 
         // PUT: api/Floors/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<Floor>> Update(int id, Floor updatedFloor)
+        public async Task<ActionResult<Floor>> Update(int id, FloorRequest updatedFloor)
         {
-            if (updatedFloor.Id != id)
-            {
-                return BadRequest(new List<string> { "Id in URL and body must match." });
-            }
-
             var validationResult = await _validator.ValidateAsync(updatedFloor);
             var errors = validationResult.Errors
                                 .Select(e => e.ErrorMessage)
                                 .ToList();
+            var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (existingFloor is null)
+                return NotFound(Message.NotFound("Floor"));
 
             if (errors.Any())
                 return BadRequest(errors);
 
-            var result = await _collection.ReplaceOneAsync(x => x.Id == id, updatedFloor);
+            var floor = _mapper.Map<Floor>(updatedFloor);
+            floor.Id = id;
+            var result = await _floorCollection.ReplaceOneAsync(x => x.Id == id, floor);
 
-            return result.ModifiedCount > 0
-                ? Ok(updatedFloor)
-                : NotFound(Message.NotFound("Floor"));
+            return Ok(Message.Updated("Floor"));
         }
 
         // DELETE: api/Floors/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _collection.DeleteOneAsync(x => x.Id == id);
-            return result.DeletedCount > 0
-                ? Ok(Message.Deleted("Floor"))
-                : NotFound(Message.NotFound("Floor"));
+            var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (existingFloor is null)
+                return NotFound(Message.NotFound("Floor"));
+            var result = await _floorCollection.DeleteOneAsync(x => x.Id == id);
+            return Ok(Message.Deleted("Floor"));
         }
     }
 }

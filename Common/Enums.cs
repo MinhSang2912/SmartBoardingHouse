@@ -33,5 +33,21 @@
             Owner = 0,
             Tenant = 1,
         }
+
+        public enum PriotyRequest
+        {
+            Low = 0,
+            Medium = 1,
+            High = 2,
+            Immediate = 3
+        }
+
+        public enum ActivityType
+        {
+            Payment,    
+            CheckOut,   
+            CheckIn,     
+            Maintenance 
+        }
     }
 }

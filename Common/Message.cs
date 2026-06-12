@@ -4,6 +4,7 @@
     {
         public static string Created(string entity) => $"{entity} created successfully.";
         public static string NotFound(string entity) => $"{entity} not found.";
+        public static string Updated(string entity) => $"{entity} updated successfully.";
         public static string Deleted(string entity) => $"{entity} deleted successfully.";
         public static string IdExists(string entity, int id) => $"{entity} with Id {id} already exists.";
 
