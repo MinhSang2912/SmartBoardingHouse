@@ -34,7 +34,7 @@ namespace SmartBoardingHouse.Data
 
                 // 1. Seed Floors
                 var floors = new List<Floor> {
-                    new Floor { Id = 1, FloorNumber = "Tang 1", RoomCount = 2 }
+                    new Floor { Id = 1, FloorNumber = 1, RoomCount = 2 }
                 };
                 await floorCol.InsertManyAsync(floors);
 
@@ -57,7 +57,7 @@ namespace SmartBoardingHouse.Data
                 var rooms = new List<Room> {
                     new Room {
                         Id = 1, RoomNumber = "P101", Price = 2000000, Area = 20,
-                        RoomDeposit = 1000000, FloorId = 1, Status = RoomStatus.Occupied
+                        RoomDeposit = 1000000, FloorId = 1, Status = RoomStatus.Available
                     },
                     new Room {
                         Id = 2, RoomNumber = "P102", Price = 2500000, Area = 25,
@@ -65,25 +65,6 @@ namespace SmartBoardingHouse.Data
                     }
                 };
                 await roomCol.InsertManyAsync(rooms);
-
-                // 4. Seed Contracts
-                var contracts = new List<Contract> {
-                    new Contract {
-                        Id = 1, ContractNumber = "HD001", RoomNumber = "P101",
-                        TenantName = "Nguyen Van A", StartDate = DateTime.Now,
-                        EndDate = DateTime.Now.AddMonths(6), PaymentDate = 5, Status = ContractStatus.Active
-                    }
-                };
-                await contractCol.InsertManyAsync(contracts);
-
-                // 5. Seed Invoices
-                var invoices = new List<Invoice> {
-                    new Invoice {
-                        Id = 1, RoomNumber = "P101", Amount = 2000000,
-                        DueDate = DateTime.Now.AddDays(7), Status = InvoiceStatus.Unpaid
-                    }
-                };
-                await invoiceCol.InsertManyAsync(invoices);
 
                 Log("Seed du lieu thanh cong cho tat ca cac collection.");
             }

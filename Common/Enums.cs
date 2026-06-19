@@ -6,7 +6,7 @@
         {
             Active = 0,
             Expired = 1,
-            Canceled = 2
+            Terminated = 2
         }
         public enum RoomStatus
         {

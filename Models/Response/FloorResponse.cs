@@ -11,7 +11,7 @@
     public class FloorItemResponse
     {
         public int Id { get; set; }
-        public string FloorNumber { get; set; } = string.Empty;
+        public int FloorNumber { get; set; } 
         public int RoomCount { get; set; }
         public int OccupiedRooms { get; set; }
         public int EmptyRooms { get; set; }

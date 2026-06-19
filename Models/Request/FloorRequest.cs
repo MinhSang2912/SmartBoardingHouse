@@ -5,7 +5,7 @@ namespace SmartBoardingHouse.Models.Request
 {
     public class FloorRequest
     {
-        public string FloorNumber { get; set; } = string.Empty;
+        public int FloorNumber { get; set; }
         public int RoomCount { get; set; }
     }
     public class FloorRequestValidation : AbstractValidator<FloorRequest>

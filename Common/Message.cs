@@ -2,78 +2,95 @@
 {
     public class Message
     {
-        public static string Created(string entity) => $"{entity} created successfully.";
-        public static string NotFound(string entity) => $"{entity} not found.";
-        public static string Updated(string entity) => $"{entity} updated successfully.";
-        public static string Deleted(string entity) => $"{entity} deleted successfully.";
-        public static string IdExists(string entity, int id) => $"{entity} with Id {id} already exists.";
+        public static string Created(string entity) => $"{entity} đã được tạo thành công.";
+        public static string NotFound(string entity) => $"{entity} không tìm thấy";
+        public static string Updated(string entity) => $"{entity} đã được cập nhật thành công.";
+        public static string Deleted(string entity) => $"{entity} đã được xóa thành công.";
+        public static string IdExists(string entity, int id) => $"{entity} với Id {id} đã tồn tại.";
 
         #region User
-        public static string UserIdIsRequired() => $"Id is required.";
-        public static string UserNameIsRequired() => $"Name is required.";
-        public static string UserPasswordIsRequired() => $"Password is required.";
-        public static string UserRoleIsRequired() => $"Role is required.";
-        public static string UserRoleIsInvalid() => $"Invalid role value.";
-        public static string UserIDCardNumberIsRequired() => $"ID card number is required.";
-        public static string UserIDCardNumberIsTooShort() => $"ID card number must be at least 10 characters long.";
+        public static string UserIdIsRequired() => "Id là bắt buộc.";
+        public static string UserNameIsRequired() => "Tên là bắt buộc.";
+        public static string UserPasswordIsRequired() => "Mật khẩu là bắt buộc.";
+        public static string UserRoleIsRequired() => "Vai trò là bắt buộc.";
+        public static string UserRoleIsInvalid() => "Giá trị vai trò không hợp lệ.";
+        public static string UserIDCardNumberIsRequired() => "Số CMND/CCCD là bắt buộc.";
+        public static string UserIDCardNumberIsTooShort() => "Số CMND/CCCD phải có ít nhất 10 ký tự.";
+        public static string UserIDCardNumberExists(string idCardNumber) => $"Người dùng với số CMND/CCCD '{idCardNumber}' đã tồn tại.";
+        public static string UserHasActiveContract() => "Người dùng này đang có hợp đồng hoạt động.";
+
         #endregion
 
         #region Room
-        public static string RoomNumberIsRequired() => "Room number is required.";
-        public static string RoomPriceMustBeGreaterThanZero() => "Price must be greater than 0.";
-        public static string RoomAreaMustBeGreaterThanZero() => "Area must be greater than 0.";
-        public static string RoomDepositMustBeNonNegative() => "Room deposit must be greater than or equal to 0.";
-        public static string RoomFloorIdIsRequired() => "Floor is required.";
-        public static string RoomStatusIsInvalid() => "Invalid room status.";
-        public static string RoomNumberExists(string roomNumber) => $"Room with number '{roomNumber}' already exists.";
+        public static string RoomNumberIsRequired() => "Số phòng là bắt buộc.";
+        public static string RoomPriceMustBeGreaterThanZero() => "Giá thuê phải lớn hơn 0.";
+        public static string RoomAreaMustBeGreaterThanZero() => "Diện tích phải lớn hơn 0.";
+        public static string RoomDepositMustBeNonNegative() => "Tiền đặt cọc phải lớn hơn hoặc bằng 0.";
+        public static string RoomFloorIdIsRequired() => "Tầng là bắt buộc.";
+        public static string RoomStatusIsInvalid() => "Trạng thái phòng không hợp lệ.";
+        public static string RoomNumberExists() => $"Phòng đã tồn tại.";
+        public static string RoomHasActiveContract() => $"Phòng đang có hợp đồng hoạt động.";
         #endregion
 
         #region Floor
-        public static string FloorNumberIsRequired() => "Floor number is required.";
-        public static string FloorRoomCountMustBeNonNegative() => "Room count must be greater than or equal to 0.";
-        public static string FloorNumberExists(string floorNumber) => $"Floor with number '{floorNumber}' already exists.";
+        public static string FloorNumberIsRequired() => "Số tầng là bắt buộc.";
+        public static string FloorRoomCountMustBeNonNegative() => "Số lượng phòng phải lớn hơn hoặc bằng 0.";
+        public static string FloorNumberExists(int floorNumber) => $"Tầng số '{floorNumber}' đã tồn tại.";
+        public static string FloorHasRooms() => "Tầng này vẫn còn phòng.";
         #endregion
 
         #region Contract
-        public static string ContractNumberIsRequired() => "Contract number is required.";
-        public static string ContractRoomNumberIsRequired() => "Room number is required.";
-        public static string ContractTenantNameIsRequired() => "Tenant name is required.";
-        public static string ContractStartDateIsRequired() => "Start date is required.";
-        public static string ContractEndDateIsRequired() => "End date is required.";
-        public static string ContractStartDateMustBeBeforeEndDate() => "Start date must be before end date.";
-        public static string ContractEndDateMustBeAfterStartDate() => "End date must be after start date.";
-        public static string ContractPaymentDateIsInvalid() => "Payment date must be between 1 and 31.";
-        public static string ContractStatusIsInvalid() => "Invalid contract status.";
-        public static string ContractNumberExists(string contractNumber) => $"Contract with number '{contractNumber}' already exists.";
+        public static string ContractNumberIsRequired() => "Mã hợp đồng là bắt buộc.";
+        public static string ContractRoomNumberIsRequired() => "Số phòng là bắt buộc.";
+        public static string ContractRoomIsExists() => "Phòng này đã có hợp đồng.";
+        public static string ContractTenantNameIsRequired() => "Tên người thuê là bắt buộc.";
+        public static string ContractTenantIsExists() => "Người thuê này đã có hợp đồng.";
+        public static string ContractStartDateIsRequired() => "Ngày bắt đầu là bắt buộc.";
+        public static string ContractEndDateIsRequired() => "Ngày kết thúc là bắt buộc.";
+        public static string ContractStartDateMustBeBeforeEndDate() => "Ngày bắt đầu phải trước ngày kết thúc.";
+        public static string ContractEndDateMustBeAfterStartDate() => "Ngày kết thúc phải sau ngày bắt đầu.";
+        public static string ContractPaymentDateIsInvalid() => "Ngày thanh toán phải nằm trong khoảng từ 1 đến 31.";
+        public static string ContractStatusIsInvalid() => "Trạng thái hợp đồng không hợp lệ.";
+        public static string ContractNumberExists(string contractNumber) => $"Hợp đồng số '{contractNumber}' đã tồn tại.";
         #endregion
 
         #region Invoice
-        public static string InvoiceRoomNumberIsRequired() => "Room number is required.";
-        public static string InvoiceAmountMustBeGreaterThanZero() => "Invoice amount must be greater than 0.";
-        public static string InvoiceDueDateIsRequired() => "Due date is required.";
-        public static string InvoiceDueDateMustBeInFuture() => "Due date must be today or in the future.";
-        public static string InvoiceStatusIsInvalid() => "Invalid invoice status.";
+        public static string InvoiceNumberExists() => "Số hóa đơn đã tồn tại.";
+        public static string InvoiceNumberIsRequired() => "Số hóa đơn là bắt buộc.";
+        public static string InvoiceRoomNumberIsRequired() => "Số phòng là bắt buộc.";
+        public static string InvoiceDueDateIsRequired() => "Ngày đến hạn là bắt buộc.";
+        public static string InvoiceStatusIsInvalid() => "Trạng thái hóa đơn không hợp lệ.";
+        public static string InvoiceBillingMonthIsInvalid() => "Tháng tính tiền phải nằm trong khoảng từ 1 đến 12.";
+        public static string InvoiceBillingYearIsInvalid() => "Năm tính tiền phải lớn hơn 2000.";
+        public static string ElectricUsageIsInvalid() => "Chỉ số điện phải lớn hơn hoặc bằng 0.";
+        public static string ElectricPriceMustBeGreaterThanZero() => "Giá điện phải lớn hơn 0.";
+        public static string WaterUsageIsInvalid() => "Chỉ số nước phải lớn hơn hoặc bằng 0.";
+        public static string WaterPriceMustBeGreaterThanZero() => "Giá nước phải lớn hơn 0.";
+        public static string ServiceFeeIsInvalid() => "Phí dịch vụ phải lớn hơn hoặc bằng 0.";
+        public static string InvoiceAlreadyPaid() => "Hóa đơn đã được thanh toán trước đó.";
         #endregion
 
         #region MaintenanceRequest
-        public static string MaintenanceRoomNumberIsRequired() => "Room number is required.";
-        public static string MaintenanceTenantNameIsRequired() => "Tenant name is required.";
-        public static string MaintenanceTitleIsRequired() => "Title is required.";
-        public static string MaintenanceTitleIsTooLong() => "Title must not exceed 200 characters.";
-        public static string MaintenanceDescriptionIsRequired() => "Description is required.";
-        public static string MaintenanceDescriptionIsTooLong() => "Description must not exceed 1000 characters.";
-        public static string MaintenanceStatusIsInvalid() => "Invalid maintenance status.";
-        public static string MaintenanceRequestExists(string roomNumber, string title) => $"Maintenance request for room '{roomNumber}' with title '{title}' already exists.";
+        public static string MaintenanceRoomNumberIsRequired() => "Số phòng là bắt buộc.";
+        public static string MaintenanceTenantNameIsRequired() => "Tên người thuê là bắt buộc.";
+        public static string MaintenanceRequestNumberIsRequired() => "Mã yêu cầu bảo trì là bắt buộc.";
+        public static string MaintenanceTitleIsRequired() => "Tiêu đề là bắt buộc.";
+        public static string MaintenanceTitleIsTooLong() => "Tiêu đề không được vượt quá 200 ký tự.";
+        public static string MaintenanceDescriptionIsRequired() => "Mô tả là bắt buộc.";
+        public static string MaintenanceDescriptionIsTooLong() => "Mô tả không được vượt quá 1000 ký tự.";
+        public static string MaintenanceStatusIsInvalid() => "Trạng thái yêu cầu bảo trì không hợp lệ.";
+        public static string MaintenancePriorityIsInvalid() => "Mức độ ưu tiên không hợp lệ.";
+        public static string MaintenanceRequestExists(string roomNumber, string title) => $"Yêu cầu bảo trì cho phòng '{roomNumber}' với tiêu đề '{title}' đã tồn tại.";
         #endregion
 
         #region MeterReading
-        public static string MeterReadingRoomNumberIsRequired() => "Room number is required.";
-        public static string MeterReadingMonthIsInvalid() => "Month must be between 1 and 12.";
-        public static string MeterReadingYearIsInvalid() => "Year must be 2020 or later.";
-        public static string MeterReadingElectricityIndexMustBeNonNegative() => "Electricity index must be greater than or equal to 0.";
-        public static string MeterReadingWaterIndexMustBeNonNegative() => "Water index must be greater than or equal to 0.";
+        public static string MeterReadingRoomNumberIsRequired() => "Số phòng là bắt buộc.";
+        public static string MeterReadingMonthIsInvalid() => "Tháng phải nằm trong khoảng từ 1 đến 12.";
+        public static string MeterReadingYearIsInvalid() => "Năm phải từ 2020 trở đi.";
+        public static string MeterReadingElectricityIndexMustBeNonNegative() => "Chỉ số điện phải lớn hơn hoặc bằng 0.";
+        public static string MeterReadingWaterIndexMustBeNonNegative() => "Chỉ số nước phải lớn hơn hoặc bằng 0.";
         public static string MeterReadingAlreadyExists(string roomNumber, int month, int year) =>
-            $"Meter reading for room '{roomNumber}' in {month}/{year} already exists.";
+            $"Đã có chỉ số công tơ cho phòng '{roomNumber}' trong tháng {month}/{year}.";
         #endregion
     }
 }

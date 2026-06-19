@@ -6,28 +6,19 @@ namespace SmartBoardingHouse.Models.Entity
 {
     public class Invoice : BaseModel
     {
+        public string InvoiceNumber { get; set; } = string.Empty;
         public string RoomNumber { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public int BillingMonth { get; set; }
+        public int BillingYear { get; set; }
+        public decimal RoomPrice { get; set; }
+        public double ElectricUsage { get; set; }  
+        public decimal ElectricPrice { get; set; }  
+        public double WaterUsage { get; set; }      
+        public decimal WaterPrice { get; set; }      
+        public decimal ServiceFee { get; set; }
+        public decimal Amount { get; set; }      
         public DateTime DueDate { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unpaid;
-    }
-
-    public class InvoiceValidation : AbstractValidator<Invoice>
-    {
-        public InvoiceValidation()
-        {
-            RuleFor(x => x.RoomNumber)
-                .NotEmpty().WithMessage(Message.InvoiceRoomNumberIsRequired());
-
-            RuleFor(x => x.Amount)
-                .GreaterThan(0).WithMessage(Message.InvoiceAmountMustBeGreaterThanZero());
-
-            RuleFor(x => x.DueDate)
-                .NotEmpty().WithMessage(Message.InvoiceDueDateIsRequired())
-                .GreaterThanOrEqualTo(DateTime.Today).WithMessage(Message.InvoiceDueDateMustBeInFuture());
-
-            RuleFor(x => x.Status)
-                .IsInEnum().WithMessage(Message.InvoiceStatusIsInvalid());
-        }
     }
 }

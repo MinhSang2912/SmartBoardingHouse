@@ -1,9 +1,14 @@
-﻿using FluentValidation;
+﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
+using SmartBoardingHouse.Models.Request;
+using SmartBoardingHouse.Models.Response;
+using SmartBoardingHouse.Services;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -12,86 +17,207 @@ namespace SmartBoardingHouse.Controllers
     public class MaintenanceRequestsController : ControllerBase
     {
         private readonly IMongoCollection<MaintenanceRequest> _collection;
-        private readonly IValidator<MaintenanceRequest> _validator;
+        private readonly IMongoCollection<Room> _roomCollection;
+        private readonly IValidator<MaintenanceRequestRequest> _validator;
+        private readonly IMapper _mapper;
+        private readonly ActivityLogService _activityLogService;
 
-        public MaintenanceRequestsController(MongoDbService mongoService, IValidator<MaintenanceRequest> validator)
+        public MaintenanceRequestsController(
+            MongoDbService mongoService,
+            IValidator<MaintenanceRequestRequest> validator,
+            IMapper mapper,
+            ActivityLogService activityLogService)
         {
-            _collection = mongoService.GetDatabase().GetCollection<MaintenanceRequest>("MaintenanceRequests");
+            var db = mongoService.GetDatabase();
+            _collection = db.GetCollection<MaintenanceRequest>("MaintenanceRequests");
+            _roomCollection = db.GetCollection<Room>("Rooms");
             _validator = validator;
+            _mapper = mapper;
+            _activityLogService = activityLogService;
         }
 
         // GET: api/MaintenanceRequests
         [HttpGet]
-        public async Task<ActionResult<List<MaintenanceRequest>>> GetAll()
+        public async Task<ActionResult<MaintenanceSummaryResponse>> GetAll()
         {
-            var requests = await _collection.Find(_ => true).ToListAsync();
-            return Ok(requests);
+            var items = await _collection
+                .Find(_ => true)
+                .SortByDescending(x => x.CreatedAt)
+                .ToListAsync();
+
+            var mapped = items.Select(MapToResponse).ToList();
+
+            var summary = new MaintenanceSummaryResponse
+            {
+                Total = mapped.Count,
+                Pending = mapped.Count(x => x.Status == MaintenanceStatus.Pending),
+                InProgress = mapped.Count(x => x.Status == MaintenanceStatus.InProgress),
+                Completed = mapped.Count(x => x.Status == MaintenanceStatus.Completed),
+                Items = mapped
+            };
+
+            return Ok(summary);
         }
 
         // GET: api/MaintenanceRequests/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<MaintenanceRequest>> GetById(int id)
+        public async Task<ActionResult<MaintenanceRequestResponse>> GetById(int id)
         {
-            var request = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            return request is null ? NotFound(Message.NotFound("MaintenanceRequest")) : Ok(request);
+            var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (item is null)
+                return NotFound(Message.NotFound("MaintenanceRequest"));
+
+            return Ok(MapToResponse(item));
         }
 
         // POST: api/MaintenanceRequests
         [HttpPost]
-        public async Task<ActionResult<MaintenanceRequest>> Create(MaintenanceRequest request)
+        public async Task<ActionResult<MaintenanceRequestResponse>> Create(MaintenanceRequestRequest request)
         {
-            var validationResult = await _validator.ValidateAsync(request);
-            var errors = validationResult.Errors
-                                .Select(e => e.ErrorMessage)
-                                .ToList();
+            var errors = await ValidateRequest(request);
 
-            // Kiểm tra yêu cầu bảo trì trùng (RoomNumber + Title)
-            var exists = await _collection
-                .Find(x => x.RoomNumber == request.RoomNumber && x.Title == request.Title)
+            var numberExists = await _collection
+                .Find(x => x.RequestNumber == request.RequestNumber)
                 .AnyAsync();
+            if (numberExists)
+                errors.Add($"Mã yêu cầu '{request.RequestNumber}' đã tồn tại.");
 
-            if (exists)
-                errors.Add(Message.MaintenanceRequestExists(request.RoomNumber, request.Title));
+            var roomExists = await _roomCollection
+                .Find(x => x.RoomNumber == request.RoomNumber)
+                .AnyAsync();
+            if (!roomExists)
+                errors.Add(Message.NotFound("Room"));
 
             if (errors.Any())
                 return BadRequest(errors);
 
-            await _collection.InsertOneAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = request.Id }, request);
+            var item = _mapper.Map<MaintenanceRequest>(request);
+            item.Id = await MongoIdHelper.GetNextIdAsync(_collection);
+            item.CreatedAt = DateTime.UtcNow;
+
+            await _collection.InsertOneAsync(item);
+
+            return CreatedAtAction(nameof(GetById), new { id = item.Id },
+                MapToResponse(item));
         }
 
         // PUT: api/MaintenanceRequests/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<MaintenanceRequest>> Update(int id, MaintenanceRequest updatedRequest)
+        public async Task<ActionResult<MaintenanceRequestResponse>> Update(int id, MaintenanceRequestRequest request)
         {
-            if (updatedRequest.Id != id)
-            {
-                return BadRequest(new List<string> { "Id in URL and body must match." });
-            }
+            var errors = await ValidateRequest(request);
 
-            var validationResult = await _validator.ValidateAsync(updatedRequest);
-            var errors = validationResult.Errors
-                                .Select(e => e.ErrorMessage)
-                                .ToList();
+            var existing = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (existing is null)
+                return NotFound(Message.NotFound("MaintenanceRequest"));
+
+            var numberExists = await _collection
+                .Find(x => x.RequestNumber == request.RequestNumber && x.Id != id)
+                .AnyAsync();
+            if (numberExists)
+                errors.Add($"Mã yêu cầu '{request.RequestNumber}' đã tồn tại.");
 
             if (errors.Any())
                 return BadRequest(errors);
 
-            var result = await _collection.ReplaceOneAsync(x => x.Id == id, updatedRequest);
+            var updated = _mapper.Map<MaintenanceRequest>(request);
+            updated.Id = id;
+            updated.CreatedAt = existing.CreatedAt;
+            updated.UpdatedAt = DateTime.UtcNow;
 
-            return result.ModifiedCount > 0
-                ? Ok(updatedRequest)
-                : NotFound(Message.NotFound("MaintenanceRequest"));
+            await _collection.ReplaceOneAsync(x => x.Id == id, updated);
+            return Ok(MapToResponse(updated));
+        }
+
+        // PUT: api/MaintenanceRequests/{id}/start
+        [HttpPut("{id}/start")]
+        public async Task<ActionResult<MaintenanceRequestResponse>> Start(int id)
+        {
+            var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (item is null)
+                return NotFound(Message.NotFound("MaintenanceRequest"));
+
+            if (item.Status != MaintenanceStatus.Pending)
+                return BadRequest("Chỉ có thể bắt đầu xử lý yêu cầu đang chờ.");
+
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<MaintenanceRequest>.Update
+                    .Set(x => x.Status, MaintenanceStatus.InProgress)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
+
+            item.Status = MaintenanceStatus.InProgress;
+            return Ok(MapToResponse(item));
+        }
+
+        // PUT: api/MaintenanceRequests/{id}/complete
+        [HttpPut("{id}/complete")]
+        public async Task<ActionResult<MaintenanceRequestResponse>> Complete(int id)
+        {
+            var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (item is null)
+                return NotFound(Message.NotFound("MaintenanceRequest"));
+
+            if (item.Status != MaintenanceStatus.InProgress)
+                return BadRequest("Chỉ có thể hoàn thành yêu cầu đang được xử lý.");
+
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<MaintenanceRequest>.Update
+                    .Set(x => x.Status, MaintenanceStatus.Completed)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
+
+            await _activityLogService.LogAsync(
+                type: ActivityType.Maintenance,
+                userName: item.TenantName,
+                roomNumber: item.RoomNumber,
+                description: item.Title);
+
+            item.Status = MaintenanceStatus.Completed;
+            return Ok(MapToResponse(item));
         }
 
         // DELETE: api/MaintenanceRequests/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _collection.DeleteOneAsync(x => x.Id == id);
-            return result.DeletedCount > 0
-                ? Ok(Message.Deleted("MaintenanceRequest"))
-                : NotFound(Message.NotFound("MaintenanceRequest"));
+            var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (item is null)
+                return NotFound(Message.NotFound("MaintenanceRequest"));
+
+            await _collection.DeleteOneAsync(x => x.Id == id);
+            return Ok(Message.Deleted("MaintenanceRequest"));
+        }
+
+        // ==================== HELPERS ====================
+
+        private async Task<List<string>> ValidateRequest(MaintenanceRequestRequest request)
+        {
+            var result = await _validator.ValidateAsync(request);
+            return result.Errors.Select(e => e.ErrorMessage).ToList();
+        }
+
+        private MaintenanceRequestResponse MapToResponse(MaintenanceRequest item)
+        {
+            var response = _mapper.Map<MaintenanceRequestResponse>(item);
+
+            response.PriorityLabel = item.Priority switch
+            {
+                PriotyRequest.High => "Cao",
+                PriotyRequest.Medium => "Trung bình",
+                PriotyRequest.Low => "Thấp",
+                _ => item.Priority.ToString()
+            };
+
+            response.StatusLabel = item.Status switch
+            {
+                MaintenanceStatus.Pending => "Chờ xử lý",
+                MaintenanceStatus.InProgress => "Đang xử lý",
+                MaintenanceStatus.Completed => "Hoàn thành",
+                _ => item.Status.ToString()
+            };
+
+            return response;
         }
     }
 }

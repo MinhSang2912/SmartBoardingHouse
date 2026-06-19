@@ -1,9 +1,14 @@
-﻿using FluentValidation;
+﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
+using SmartBoardingHouse.Models.Request;
+using SmartBoardingHouse.Models.Response;
+using SmartBoardingHouse.Services;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -12,86 +17,185 @@ namespace SmartBoardingHouse.Controllers
     public class InvoicesController : ControllerBase
     {
         private readonly IMongoCollection<Invoice> _collection;
-        private readonly IValidator<Invoice> _validator;
+        private readonly IMongoCollection<Room> _roomCollection;
+        private readonly IMongoCollection<User> _userCollection;
+        private readonly IValidator<InvoiceRequest> _validator;
+        private readonly IMapper _mapper;
+        private readonly ActivityLogService _activityLogService;
 
-        public InvoicesController(MongoDbService mongoService, IValidator<Invoice> validator)
+        public InvoicesController(
+            MongoDbService mongoService,
+            IValidator<InvoiceRequest> validator,
+            IMapper mapper,
+            ActivityLogService activityLogService)
         {
-            _collection = mongoService.GetDatabase().GetCollection<Invoice>("Invoices");
+            var db = mongoService.GetDatabase();
+            _collection = db.GetCollection<Invoice>("Invoices");
+            _userCollection = db.GetCollection<User>("Users");
+            _roomCollection = db.GetCollection<Room>("Rooms");
             _validator = validator;
+            _mapper = mapper;
+            _activityLogService = activityLogService;
         }
 
         // GET: api/Invoices
         [HttpGet]
-        public async Task<ActionResult<List<Invoice>>> GetAll()
+        public async Task<ActionResult<List<InvoiceResponse>>> GetAll()
         {
             var invoices = await _collection.Find(_ => true).ToListAsync();
-            return Ok(invoices);
+            return Ok(invoices.Select(MapToResponse).ToList());
         }
 
         // GET: api/Invoices/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Invoice>> GetById(int id)
+        public async Task<ActionResult<InvoiceResponse>> GetById(int id)
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            return invoice is null ? NotFound(Message.NotFound("Invoice")) : Ok(invoice);
+            if (invoice is null)
+                return NotFound(Message.NotFound("Hóa đơn"));
+
+            return Ok(MapToResponse(invoice));
         }
 
         // POST: api/Invoices
         [HttpPost]
-        public async Task<ActionResult<Invoice>> Create(Invoice invoice)
+        public async Task<ActionResult<InvoiceResponse>> Create(InvoiceRequest request)
         {
-            var validationResult = await _validator.ValidateAsync(invoice);
-            var errors = validationResult.Errors
-                                .Select(e => e.ErrorMessage)
-                                .ToList();
+            var errors = await ValidateRequest(request);
 
-            // Kiểm tra trùng RoomNumber + DueDate (tùy chọn)
             var invoiceExists = await _collection
-                .Find(x => x.RoomNumber == invoice.RoomNumber && x.DueDate == invoice.DueDate)
+                .Find(x => x.InvoiceNumber == request.InvoiceNumber)
                 .AnyAsync();
-
             if (invoiceExists)
-                errors.Add($"Invoice for room {invoice.RoomNumber} on {invoice.DueDate:yyyy-MM-dd} already exists.");
+                errors.Add(Message.InvoiceNumberExists());
+
+            var roomExists = await _roomCollection
+                .Find(x => x.RoomNumber == request.RoomNumber)
+                .AnyAsync();
+            if (!roomExists)
+                errors.Add(Message.NotFound("Phòng"));
+            
+            var userExists = await _userCollection
+                .Find(x => x.Name == request.TenantName)
+                .AnyAsync();
+            
+            if (!userExists)
+                errors.Add(Message.NotFound("Người thuê"));
 
             if (errors.Any())
                 return BadRequest(errors);
 
+            var invoice = _mapper.Map<Invoice>(request);
+            invoice.Id = await MongoIdHelper.GetNextIdAsync(_collection);
+            invoice.CreatedAt = DateTime.UtcNow;
+
             await _collection.InsertOneAsync(invoice);
-            return CreatedAtAction(nameof(GetById), new { id = invoice.Id }, invoice);
+
+            return CreatedAtAction(nameof(GetById), new { id = invoice.Id },
+                MapToResponse(invoice));
         }
 
         // PUT: api/Invoices/{id}
-        [HttpPut("{id}")]
-        public async Task<ActionResult<Invoice>> Update(int id, Invoice updatedInvoice)
+        //[HttpPut("{id}")]
+        //public async Task<ActionResult<InvoiceResponse>> Update(int id, InvoiceRequest request)
+        //{
+        //    var errors = await ValidateRequest(request);
+
+        //    var existingInvoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+        //    if (existingInvoice is null)
+        //        return NotFound(Message.NotFound("Invoice"));
+
+        //    var invoiceExists = await _collection
+        //        .Find(x => x.InvoiceNumber == request.InvoiceNumber && x.Id != id)
+        //        .AnyAsync();
+        //    if (invoiceExists)
+        //        errors.Add($"Mã hóa đơn '{request.InvoiceNumber}' đã tồn tại.");
+
+        //    var roomExists = await _roomCollection
+        //        .Find(x => x.RoomNumber == request.RoomNumber)
+        //        .AnyAsync();
+        //    if (!roomExists)
+        //        errors.Add(Message.NotFound("Room"));
+
+        //    if (errors.Any())
+        //        return BadRequest(errors);
+
+        //    var updatedInvoice = _mapper.Map<Invoice>(request);
+        //    updatedInvoice.Id = id;
+        //    updatedInvoice.CreatedAt = existingInvoice.CreatedAt;
+        //    updatedInvoice.UpdatedAt = DateTime.UtcNow;
+
+        //    await _collection.ReplaceOneAsync(x => x.Id == id, updatedInvoice);
+        //    return Ok(MapToResponse(updatedInvoice));
+        //}
+
+        // PUT: api/Invoices/{id}/pay
+        [HttpPut("{id}/pay")]
+        public async Task<ActionResult<InvoiceResponse>> MarkAsPaid(int id)
         {
-            if (updatedInvoice.Id != id)
-            {
-                return BadRequest(new List<string> { "Id in URL and body must match." });
-            }
+            var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (invoice is null)
+                return NotFound(Message.NotFound("Hóa đơn"));
 
-            var validationResult = await _validator.ValidateAsync(updatedInvoice);
-            var errors = validationResult.Errors
-                                .Select(e => e.ErrorMessage)
-                                .ToList();
+            if (invoice.Status == InvoiceStatus.Paid)
+                return BadRequest(Message.InvoiceAlreadyPaid());
 
-            if (errors.Any())
-                return BadRequest(errors);
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<Invoice>.Update
+                    .Set(x => x.Status, InvoiceStatus.Paid)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
-            var result = await _collection.ReplaceOneAsync(x => x.Id == id, updatedInvoice);
+            await _activityLogService.LogAsync(
+                type: ActivityType.Payment,
+                userName: invoice.TenantName,
+                roomNumber: invoice.RoomNumber,
+                description: $"Đã thanh toán {invoice.Amount / 1_000_000:0.#}M",
+                amount: invoice.Amount);
 
-            return result.ModifiedCount > 0
-                ? Ok(updatedInvoice)
-                : NotFound(Message.NotFound("Invoice"));
+            invoice.Status = InvoiceStatus.Paid;
+            return Ok(MapToResponse(invoice));
         }
 
         // DELETE: api/Invoices/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _collection.DeleteOneAsync(x => x.Id == id);
-            return result.DeletedCount > 0
-                ? Ok(Message.Deleted("Invoice"))
-                : NotFound(Message.NotFound("Invoice"));
+            var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (invoice is null)
+                return NotFound(Message.NotFound("Hóa đơn"));
+
+            await _collection.DeleteOneAsync(x => x.Id == id);
+            return Ok(Message.Deleted("Hóa đơn"));
+        }
+
+        // ==================== HELPERS ====================
+
+        private async Task<List<string>> ValidateRequest(InvoiceRequest request)
+        {
+            var result = await _validator.ValidateAsync(request);
+            return result.Errors.Select(e => e.ErrorMessage).ToList();
+        }
+
+        private InvoiceResponse MapToResponse(Invoice invoice)
+        {
+            var response = _mapper.Map<InvoiceResponse>(invoice);
+
+            var effectiveStatus = invoice.Status == InvoiceStatus.Unpaid && invoice.DueDate < DateTime.Now
+                ? InvoiceStatus.Overdue
+                : invoice.Status;
+
+            response.Status = effectiveStatus;
+            response.StatusLabel = effectiveStatus switch
+            {
+                InvoiceStatus.Paid    => "Đã thanh toán",
+                InvoiceStatus.Unpaid  => "Chờ thanh toán",
+                InvoiceStatus.Overdue => "Quá hạn",
+                _                     => effectiveStatus.ToString()
+            };
+            response.BillingPeriod = "Tháng " + invoice.BillingMonth + "/" + invoice.BillingYear;
+
+            return response;
         }
     }
 }

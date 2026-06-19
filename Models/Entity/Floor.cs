@@ -5,9 +5,8 @@ namespace SmartBoardingHouse.Models.Entity
 {
     public class Floor : BaseModel
     {
-        public string FloorNumber { get; set; } = string.Empty;
+        public int FloorNumber { get; set; }
         public int RoomCount { get; set; }
     }
 
-    
 }

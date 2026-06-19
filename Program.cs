@@ -3,6 +3,9 @@ using FluentValidation;
 using Microsoft.Extensions.Logging.Abstractions;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Mappings;
+using SmartBoardingHouse.Models.Entity;
+using SmartBoardingHouse.Models.Request;
+using SmartBoardingHouse.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,21 +16,36 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // Đăng ký Validators 
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Entity.Contract>, SmartBoardingHouse.Models.Entity.ContractValidation>();
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Request.FloorRequest>, SmartBoardingHouse.Models.Request.FloorRequestValidation>();
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Entity.Invoice>, SmartBoardingHouse.Models.Entity.InvoiceValidation>();
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Entity.MaintenanceRequest>, SmartBoardingHouse.Models.Entity.MaintenanceRequestValidation>();
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Entity.MeterReading>, SmartBoardingHouse.Models.Entity.MeterReadingValidation>();
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Entity.Room>, SmartBoardingHouse.Models.Entity.RoomValidation>();
-builder.Services.AddScoped<IValidator<SmartBoardingHouse.Models.Entity.User>, SmartBoardingHouse.Models.Entity.UserValidation>();
+builder.Services.AddScoped<IValidator<ContractRequest>, ContractRequestValidation>();
+builder.Services.AddScoped<IValidator<FloorRequest>, FloorRequestValidation>();
+builder.Services.AddScoped<IValidator<InvoiceRequest>, InvoiceRequestValidation>();
+builder.Services.AddScoped<IValidator<MaintenanceRequestRequest>, MaintenanceRequestRequestValidation>();
+builder.Services.AddScoped<IValidator<MeterReadingRequest>, MeterReadingRequestValidation>();
+builder.Services.AddScoped<IValidator<RoomRequest>, RoomRequestValidation>();
+builder.Services.AddScoped<IValidator<UserRequest>, UserRequestValidation>();
+
+// Đăng ký ActivityLogService
+builder.Services.AddScoped<ActivityLogService>(sp =>
+{
+    var mongoService = sp.GetRequiredService<MongoDbService>();
+    var collection = mongoService.GetDatabase().GetCollection<ActivityLog>("ActivityLogs");
+    return new ActivityLogService(collection);
+});
 
 // Đăng ký AutoMapper
 var mapperConfig = new MapperConfiguration(cfg =>
 {
     cfg.AddProfile<FloorMappingProfile>();
-},NullLoggerFactory.Instance);
+    cfg.AddProfile<RoomMappingProfile>();
+    cfg.AddProfile<UserMappingProfile>();
+    cfg.AddProfile<ContractMappingProfile>();
+    cfg.AddProfile<InvoiceMappingProfile>();
+    cfg.AddProfile<MeterReadingMappingProfile>();
+
+}, NullLoggerFactory.Instance);
 
 builder.Services.AddSingleton(mapperConfig.CreateMapper());
+builder.Services.AddSingleton<PhotoService>();
 
 var app = builder.Build();
 
@@ -46,6 +64,7 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 app.UseAuthorization();

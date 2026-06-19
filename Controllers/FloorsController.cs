@@ -100,7 +100,7 @@ namespace SmartBoardingHouse.Controllers
 
             await _floorCollection.InsertOneAsync(floor);
 
-            return Ok(Message.Created("Floor"));
+            return CreatedAtAction(nameof(GetAll), new { id = floor.Id }, floor);
         }
 
         // PUT: api/Floors/{id}
@@ -113,7 +113,7 @@ namespace SmartBoardingHouse.Controllers
                                 .ToList();
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
-                return NotFound(Message.NotFound("Floor"));
+                return NotFound(Message.NotFound("Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -122,7 +122,7 @@ namespace SmartBoardingHouse.Controllers
             floor.Id = id;
             var result = await _floorCollection.ReplaceOneAsync(x => x.Id == id, floor);
 
-            return Ok(Message.Updated("Floor"));
+            return Ok(Message.Updated("Tầng"));
         }
 
         // DELETE: api/Floors/{id}
@@ -131,9 +131,12 @@ namespace SmartBoardingHouse.Controllers
         {
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
-                return NotFound(Message.NotFound("Floor"));
+                return NotFound(Message.NotFound("Tầng"));
+
+            if(existingFloor.RoomCount != 0)
+                return BadRequest(Message.FloorHasRooms());
             var result = await _floorCollection.DeleteOneAsync(x => x.Id == id);
-            return Ok(Message.Deleted("Floor"));
+            return Ok(Message.Deleted("Tầng"));
         }
     }
 }

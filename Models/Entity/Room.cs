@@ -15,16 +15,4 @@ namespace SmartBoardingHouse.Models.Entity
       
     }
 
-    public class RoomValidation : AbstractValidator<Room>
-    {
-        public RoomValidation()
-        {
-            RuleFor(x => x.RoomNumber).NotEmpty().WithMessage(Message.RoomNumberIsRequired());
-            RuleFor(x => x.Price).GreaterThan(0).WithMessage(Message.RoomPriceMustBeGreaterThanZero());
-            RuleFor(x => x.Area).GreaterThan(0).WithMessage(Message.RoomAreaMustBeGreaterThanZero());
-            RuleFor(x => x.RoomDeposit).GreaterThanOrEqualTo(0).WithMessage(Message.RoomDepositMustBeNonNegative());
-            RuleFor(x => x.FloorId).GreaterThan(0).WithMessage(Message.RoomFloorIdIsRequired());
-            RuleFor(x => x.Status).IsInEnum().WithMessage(Message.RoomStatusIsInvalid());
-        }
-    }
 }

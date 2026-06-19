@@ -5,10 +5,6 @@ namespace SmartBoardingHouse.Common
 {
     public static class MongoIdHelper
     {
-        /// <summary>
-        /// Lấy Id tiếp theo (max Id hiện tại + 1) cho một collection bất kỳ
-        /// kế thừa từ BaseModel (Id kiểu int).
-        /// </summary>
         public static async Task<int> GetNextIdAsync<T>(IMongoCollection<T> collection) where T : BaseModel
         {
             var lastItem = await collection
@@ -19,5 +15,19 @@ namespace SmartBoardingHouse.Common
 
             return lastItem == null ? 1 : lastItem.Id + 1;
         }
+    }
+}
+
+namespace SmartBoardingHouse.Common
+{
+    public static class PasswordHelper
+    {
+        public const string DefaultPassword = "Abc@1234";
+
+        public static string Hash(string password)
+            => BCrypt.Net.BCrypt.HashPassword(password);
+
+        public static bool Verify(string password, string hash)
+            => BCrypt.Net.BCrypt.Verify(password, hash);
     }
 }
