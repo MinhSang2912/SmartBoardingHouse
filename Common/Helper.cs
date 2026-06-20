@@ -28,6 +28,24 @@ namespace SmartBoardingHouse.Common
             => BCrypt.Net.BCrypt.HashPassword(password);
 
         public static bool Verify(string password, string hash)
-            => BCrypt.Net.BCrypt.Verify(password, hash);
+        {
+            // Kiểm tra hash hợp lệ (BCrypt hash luôn bắt đầu bằng $2a$, $2b$, $2x$, $2y$)
+            if (string.IsNullOrEmpty(hash) || !hash.StartsWith("$2"))
+            {
+                // Password chưa được hash → so sánh plain text
+                return password == hash;
+            }
+
+            try
+            {
+                return BCrypt.Net.BCrypt.Verify(password, hash);
+            }
+            catch
+            {
+                // Hash không hợp lệ → không cho đăng nhập
+                return false;
+            }
+        }
     }
 }
+

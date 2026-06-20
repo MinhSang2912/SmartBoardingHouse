@@ -94,5 +94,20 @@
         public static string MeterReadingThisMonthMuchHighterLastMonth() => "Số tháng này phải lớn hơn số trước";
         public static string MeterReadingRoomNotOccupied() => "Phòng này không có người thuê";
         #endregion
+
+        #region Login
+        public static string LoginEmailIsRequired() => "Email không được để trống.";
+        public static string LoginEmailIsInvalid() => "Email không hợp lệ.";
+        public static string LoginPasswordIsRequired() => "Mật khẩu không được để trống.";
+        public static string LoginRoleIsInvalid() => "Vai trò không hợp lệ.";
+        public static string LoginEmailOrPasswordIsWrong() => "Email hoặc mật khẩu không đúng.";
+        public static string LoginEmailExists() => "Email đã được sử dụng.";
+        public static string RegisterNameIsRequired() => "Họ và tên không được để trống.";
+        public static string RegisterPhoneIsRequired() => "Số điện thoại không được để trống.";
+        public static string RegisterPhoneIsInvalid() => "Số điện thoại không hợp lệ.";
+        public static string RegisterPasswordTooShort() => "Mật khẩu phải có ít nhất 6 ký tự.";
+        public static string RegisterConfirmPasswordIsRequired() => "Xác nhận mật khẩu không được để trống.";
+        public static string RegisterPasswordNotMatch() => "Mật khẩu xác nhận không khớp.";
+        #endregion
     }
 }
