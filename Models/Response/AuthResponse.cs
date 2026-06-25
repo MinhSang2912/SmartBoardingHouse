@@ -13,5 +13,6 @@ namespace SmartBoardingHouse.Models.Response
         public string RoleLabel { get; set; } = string.Empty;
         public string RoomNumber { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
     }
 }

@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
@@ -23,27 +23,27 @@ namespace SmartBoardingHouse.Models.Entity
         public ContractValidation()
         {
             RuleFor(x => x.ContractNumber)
-                .NotEmpty().WithMessage(Message.ContractNumberIsRequired());
+                .NotEmpty().WithMessage(CommonMessage.ContractNumberIsRequired());
 
             RuleFor(x => x.RoomNumber)
-                .NotEmpty().WithMessage(Message.ContractRoomNumberIsRequired());
+                .NotEmpty().WithMessage(CommonMessage.ContractRoomNumberIsRequired());
 
             RuleFor(x => x.TenantName)
-                .NotEmpty().WithMessage(Message.ContractTenantNameIsRequired());
+                .NotEmpty().WithMessage(CommonMessage.ContractTenantNameIsRequired());
 
             RuleFor(x => x.StartDate)
-                .NotEmpty().WithMessage(Message.ContractStartDateIsRequired())
-                .LessThan(x => x.EndDate).WithMessage(Message.ContractStartDateMustBeBeforeEndDate());
+                .NotEmpty().WithMessage(CommonMessage.ContractStartDateIsRequired())
+                .LessThan(x => x.EndDate).WithMessage(CommonMessage.ContractStartDateMustBeBeforeEndDate());
 
             RuleFor(x => x.EndDate)
-                .NotEmpty().WithMessage(Message.ContractEndDateIsRequired())
-                .GreaterThan(x => x.StartDate).WithMessage(Message.ContractEndDateMustBeAfterStartDate());
+                .NotEmpty().WithMessage(CommonMessage.ContractEndDateIsRequired())
+                .GreaterThan(x => x.StartDate).WithMessage(CommonMessage.ContractEndDateMustBeAfterStartDate());
 
             RuleFor(x => x.PaymentDate)
-                .InclusiveBetween(1, 31).WithMessage(Message.ContractPaymentDateIsInvalid());
+                .InclusiveBetween(1, 31).WithMessage(CommonMessage.ContractPaymentDateIsInvalid());
 
             RuleFor(x => x.Status)
-                .IsInEnum().WithMessage(Message.ContractStatusIsInvalid());
+                .IsInEnum().WithMessage(CommonMessage.ContractStatusIsInvalid());
         }
     }
 }

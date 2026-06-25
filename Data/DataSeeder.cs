@@ -42,12 +42,12 @@ namespace SmartBoardingHouse.Data
                 var users = new List<User> {
                     new User {
                         Id = 1, Name = "Chu Nha", Email = "chunha@example.com",
-                        Password = "password123", Role = Role.Owner,
+                        Password = "password123", 
                         PhoneNumber = "0900111222", IDCardNumber = "012345678910"
                     },
                     new User {
                         Id = 2, Name = "Nguyen Van A", Email = "nguyenvana@example.com",
-                        Password = "password123", Role = Role.Tenant,
+                        Password = "password123", 
                         PhoneNumber = "0912345678", IDCardNumber = "012345678901"
                     }
                 };

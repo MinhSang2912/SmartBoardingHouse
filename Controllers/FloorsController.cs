@@ -2,12 +2,13 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using static SmartBoardingHouse.Common.Enums;
+using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -72,7 +73,7 @@ namespace SmartBoardingHouse.Controllers
         //public async Task<ActionResult<Floor>> GetById(int id)
         //{
         //    var floor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
-        //    return floor is null ? NotFound(Message.NotFound("Floor")) : Ok(floor);
+        //    return floor is null ? NotFound(CommonMessage.NotFound("Floor")) : Ok(floor);
         //}
 
         // POST: api/Floors
@@ -89,7 +90,7 @@ namespace SmartBoardingHouse.Controllers
                 .AnyAsync();
 
             if (floorNumberExists)
-                errors.Add(Message.FloorNumberExists(request.FloorNumber));
+                errors.Add(CommonMessage.FloorNumberExists(request.FloorNumber));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -113,7 +114,7 @@ namespace SmartBoardingHouse.Controllers
                                 .ToList();
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
-                return NotFound(Message.NotFound("Tầng"));
+                return NotFound(CommonMessage.NotFound("Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -122,7 +123,7 @@ namespace SmartBoardingHouse.Controllers
             floor.Id = id;
             var result = await _floorCollection.ReplaceOneAsync(x => x.Id == id, floor);
 
-            return Ok(Message.Updated("Tầng"));
+            return Ok(CommonMessage.Updated("Tầng"));
         }
 
         // DELETE: api/Floors/{id}
@@ -131,12 +132,12 @@ namespace SmartBoardingHouse.Controllers
         {
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
-                return NotFound(Message.NotFound("Tầng"));
+                return NotFound(CommonMessage.NotFound("Tầng"));
 
             if(existingFloor.RoomCount != 0)
-                return BadRequest(Message.FloorHasRooms());
+                return BadRequest(CommonMessage.FloorHasRooms());
             var result = await _floorCollection.DeleteOneAsync(x => x.Id == id);
-            return Ok(Message.Deleted("Tầng"));
+            return Ok(CommonMessage.Deleted("Tầng"));
         }
     }
 }

@@ -18,6 +18,7 @@ namespace SmartBoardingHouse.Models.Entity
         public decimal WaterPrice { get; set; }      
         public decimal ServiceFee { get; set; }
         public decimal Amount { get; set; }      
+        public decimal PaidAmount { get; set; } = 0m;
         public DateTime DueDate { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unpaid;
     }

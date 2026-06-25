@@ -2,12 +2,13 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using static SmartBoardingHouse.Common.Enums;
+using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -52,7 +53,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var user = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (user is null)
-                return NotFound(Message.NotFound("Người dùng"));
+                return NotFound(CommonMessage.NotFound("Người dùng"));
 
             var rooms = await _roomCollection.Find(_ => true).ToListAsync();
             var contracts = await _contractCollection.Find(_ => true).ToListAsync();
@@ -70,7 +71,7 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.IDCardNumber == request.IDCardNumber)
                 .AnyAsync();
             if (idCardExists)
-                errors.Add(Message.UserIDCardNumberExists(request.IDCardNumber));
+                errors.Add(CommonMessage.UserIDCardNumberExists(request.IDCardNumber));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -99,13 +100,13 @@ namespace SmartBoardingHouse.Controllers
 
             var existingUser = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingUser is null)
-                return NotFound(Message.NotFound("Người thuê"));
+                return NotFound(CommonMessage.NotFound("Người thuê"));
 
             var idCardExists = await _collection
                 .Find(x => x.IDCardNumber == request.IDCardNumber && x.Id != id)
                 .AnyAsync();
             if (idCardExists)
-                errors.Add(Message.UserIDCardNumberExists(request.IDCardNumber));
+                errors.Add(CommonMessage.UserIDCardNumberExists(request.IDCardNumber));
 
 
             if (errors.Any())
@@ -130,12 +131,12 @@ namespace SmartBoardingHouse.Controllers
         {
             var user = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (user is null)
-                return NotFound(Message.NotFound("Người thuê"));
-            if (user.RoomNumber is not null)
-                return BadRequest(Message.UserHasActiveContract());
+                return NotFound(CommonMessage.NotFound("Người thuê"));
+            if (user.RoomNumber != "Chưa có phòng")
+                return BadRequest(CommonMessage.UserHasActiveContract());
 
             await _collection.DeleteOneAsync(x => x.Id == id);
-            return Ok(Message.Deleted("Người thuê"));
+            return Ok(CommonMessage.Deleted("Người thuê"));
         }
 
         // ==================== HELPERS ====================
@@ -162,14 +163,6 @@ namespace SmartBoardingHouse.Controllers
                 c.Status == ContractStatus.Active);
 
             response.StartDate = contract?.StartDate;
-            response.StatusLabel = contract is not null ? "Đã có phòng" : "Chưa có phòng";
-
-            response.RoleLabel = user.Role switch
-            {
-                Role.Tenant => "Người thuê",
-                Role.Owner => "Chủ nhà",
-                _ => user.Role.ToString()
-            };
 
             return response;
         }

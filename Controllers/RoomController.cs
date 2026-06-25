@@ -2,12 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using AutoMapper;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using static SmartBoardingHouse.Common.Enums;
+using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -54,7 +55,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (room is null)
-                return NotFound(Message.NotFound("Phòng"));
+                return NotFound(CommonMessage.NotFound("Phòng"));
 
             var floors = await _floorCollection.Find(_ => true).ToListAsync();
             var activeContracts = await _contractCollection
@@ -65,7 +66,7 @@ namespace SmartBoardingHouse.Controllers
         }
 
         // POST: api/Rooms
-        [HttpPost]
+        [HttpPost]      
         public async Task<ActionResult<RoomResponse>> Create(RoomRequest request)
         {
             var errors = await ValidateRequest(request);
@@ -74,13 +75,13 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.RoomNumber == request.RoomNumber)
                 .AnyAsync();
             if (roomNumberExists)
-                errors.Add(Message.RoomNumberExists());
+                errors.Add(CommonMessage.RoomNumberExists());
 
             var floor = await _floorCollection
                 .Find(x => x.Id == request.FloorId)
                 .FirstOrDefaultAsync();
             if (floor is null)
-                errors.Add(Message.NotFound("Tầng"));
+                errors.Add(CommonMessage.NotFound("Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -109,19 +110,19 @@ namespace SmartBoardingHouse.Controllers
 
             var existingRoom = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingRoom is null)
-                return NotFound(Message.NotFound("Phòng"));
+                return NotFound(CommonMessage.NotFound("Phòng"));
 
             var roomNumberExists = await _collection
                 .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id)
                 .AnyAsync();
             if (roomNumberExists)
-                errors.Add(Message.RoomNumberExists());
+                errors.Add(CommonMessage.RoomNumberExists());
 
             var floor = await _floorCollection
                 .Find(x => x.Id == request.FloorId)
                 .FirstOrDefaultAsync();
             if (floor is null)
-                errors.Add(Message.NotFound("Tầng"));
+                errors.Add(CommonMessage.NotFound("Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -159,12 +160,12 @@ namespace SmartBoardingHouse.Controllers
         {
             var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (room is null)
-                return NotFound(Message.NotFound("Phòng"));
+                return NotFound(CommonMessage.NotFound("Phòng"));
             var activeContractExists = await _contractCollection
                 .Find(c => c.RoomNumber == room.RoomNumber && c.Status == ContractStatus.Active)
                 .AnyAsync();
             if (activeContractExists)
-                return BadRequest(Message.RoomHasActiveContract());
+                return BadRequest(CommonMessage.RoomHasActiveContract());
 
             await _collection.DeleteOneAsync(x => x.Id == id);
 
@@ -172,7 +173,7 @@ namespace SmartBoardingHouse.Controllers
                 x => x.Id == room.FloorId,
                 Builders<Floor>.Update.Inc(x => x.RoomCount, -1));
 
-            return Ok(Message.Deleted("Phòng"));
+            return Ok(CommonMessage.Deleted("Phòng"));
         }
 
         // ==================== HELPERS ====================

@@ -17,7 +17,6 @@ var builder = WebApplication.CreateBuilder(args);
 // ====================== SERVICES ======================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();

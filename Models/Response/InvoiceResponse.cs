@@ -13,6 +13,7 @@ namespace SmartBoardingHouse.Models.Response
         public DateTime DueDate { get; set; }
         public InvoiceStatus Status { get; set; }
         public string StatusLabel { get; set; } = string.Empty;
+        public decimal PaidAmount { get; set; }
 
         // Chi tiết thanh toán
         public decimal RoomPrice { get; set; }

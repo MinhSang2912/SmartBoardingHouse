@@ -8,7 +8,6 @@ namespace SmartBoardingHouse.Models.Request
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public Role Role { get; set; } = Role.Tenant;
     }
 
     public class LoginRequestValidation : AbstractValidator<LoginRequest>
@@ -20,8 +19,6 @@ namespace SmartBoardingHouse.Models.Request
                 .EmailAddress().WithMessage(Message.LoginEmailIsInvalid());
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage(Message.LoginPasswordIsRequired());
-            RuleFor(x => x.Role)
-                .IsInEnum().WithMessage(Message.LoginRoleIsInvalid());
         }
     }
 }

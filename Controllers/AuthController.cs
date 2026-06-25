@@ -1,13 +1,14 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
-using static SmartBoardingHouse.Common.Enums;
+using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -42,14 +43,18 @@ namespace SmartBoardingHouse.Controllers
 
             // Tìm user theo email + role
             var user = await _userCollection
-                .Find(x => x.Email == request.Email && x.Role == request.Role)
+                .Find(x => x.Email == request.Email)
                 .FirstOrDefaultAsync();
 
             if (user is null)
-                return BadRequest(Message.LoginEmailOrPasswordIsWrong());
+                return BadRequest(CommonMessage.LoginEmailOrPasswordIsWrong());
 
             if (!PasswordHelper.Verify(request.Password, user.Password))
-                return BadRequest(Message.LoginEmailOrPasswordIsWrong());
+                return BadRequest(CommonMessage.LoginEmailOrPasswordIsWrong());
+
+            user.RefreshToken = _jwtService.GenerateRefreshToken();
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
 
             return Ok(MapToAuthResponse(user));
         }
@@ -67,7 +72,7 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.Email == request.Email)
                 .AnyAsync();
             if (emailExists)
-                return BadRequest(Message.LoginEmailExists());
+                return BadRequest(CommonMessage.LoginEmailExists());
 
             var user = new User
             {
@@ -76,14 +81,106 @@ namespace SmartBoardingHouse.Controllers
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
                 Password = PasswordHelper.Hash(request.Password),
-                Role = request.Role,
                 RoomNumber = string.Empty,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                RefreshToken = _jwtService.GenerateRefreshToken(),
+                RefreshTokenExpiry = DateTime.UtcNow.AddDays(7)
             };
 
             await _userCollection.InsertOneAsync(user);
 
             return Ok(MapToAuthResponse(user));
+        }
+
+        // POST: api/Auth/refresh-token
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(RefreshTokenRequest request)
+        {
+            if (string.IsNullOrEmpty(request.RefreshToken))
+                return BadRequest("Refresh token is required.");
+
+            var user = await _userCollection
+                .Find(x => x.RefreshToken == request.RefreshToken)
+                .FirstOrDefaultAsync();
+
+            if (user is null || user.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
+                return Unauthorized("Refresh token is invalid or expired.");
+
+            user.RefreshToken = _jwtService.GenerateRefreshToken();
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+
+            var response = new
+            {
+                Token = _jwtService.GenerateToken(user),
+                RefreshToken = user.RefreshToken
+            };
+
+            return Ok(response);
+        }
+
+        // POST: api/Auth/forgot-password
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.NewPassword))
+                return BadRequest("Email and new password are required.");
+
+            var user = await _userCollection.Find(x => x.Email == request.Email).FirstOrDefaultAsync();
+            if (user is null)
+                return NotFound(CommonMessage.NotFound("Người dùng"));
+
+            user.Password = PasswordHelper.Hash(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+
+            return Ok(CommonMessage.Updated("Mật khẩu"));
+        }
+
+        // PUT: api/Auth/change-password
+        [HttpPut("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+        {
+            if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword))
+                return BadRequest("Current password and new password are required.");
+
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var user = await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+            if (user is null)
+                return NotFound(CommonMessage.NotFound("Người dùng"));
+
+            if (!PasswordHelper.Verify(request.CurrentPassword, user.Password))
+                return BadRequest("Mật khẩu hiện tại không đúng.");
+
+            user.Password = PasswordHelper.Hash(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+
+            return Ok(CommonMessage.Updated("Mật khẩu"));
+        }
+
+        // POST: api/Auth/logout
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var user = await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+            if (user is null)
+                return NotFound(CommonMessage.NotFound("Người dùng"));
+
+            user.RefreshToken = null;
+            user.RefreshTokenExpiry = null;
+            user.FcmToken = null;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+
+            return Ok(CommonMessage.Updated("Đăng xuất"));
         }
 
         // ==================== HELPERS ====================
@@ -96,13 +193,7 @@ namespace SmartBoardingHouse.Controllers
                 Name = user.Name,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                Role = user.Role,
-                RoleLabel = user.Role switch
-                {
-                    Role.Owner => "Chủ nhà",
-                    Role.Tenant => "Người thuê",
-                    _ => user.Role.ToString()
-                },
+                
                 RoomNumber = user.RoomNumber,
                 Token = _jwtService.GenerateToken(user)
             };

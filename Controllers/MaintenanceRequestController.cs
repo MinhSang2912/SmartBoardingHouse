@@ -2,7 +2,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
@@ -65,7 +65,7 @@ namespace SmartBoardingHouse.Controllers
         //{
         //    var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
         //    if (item is null)
-        //        return NotFound(Message.NotFound("MaintenanceRequest"));
+        //        return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
         //    return Ok(MapToResponse(item));
         //}
@@ -86,7 +86,7 @@ namespace SmartBoardingHouse.Controllers
         //        .Find(x => x.RoomNumber == request.RoomNumber)
         //        .AnyAsync();
         //    if (!roomExists)
-        //        errors.Add(Message.NotFound("Room"));
+        //        errors.Add(CommonMessage.NotFound("Room"));
 
         //    if (errors.Any())
         //        return BadRequest(errors);
@@ -109,7 +109,7 @@ namespace SmartBoardingHouse.Controllers
 
         //    var existing = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
         //    if (existing is null)
-        //        return NotFound(Message.NotFound("MaintenanceRequest"));
+        //        return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
         //    var numberExists = await _collection
         //        .Find(x => x.RequestNumber == request.RequestNumber && x.Id != id)
@@ -135,7 +135,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (item is null)
-                return NotFound(Message.NotFound("MaintenanceRequest"));
+                return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
             if (item.Status != MaintenanceStatus.Pending)
                 return BadRequest("Chỉ có thể bắt đầu xử lý yêu cầu đang chờ.");
@@ -156,7 +156,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (item is null)
-                return NotFound(Message.NotFound("MaintenanceRequest"));
+                return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
             if (item.Status != MaintenanceStatus.InProgress)
                 return BadRequest("Chỉ có thể hoàn thành yêu cầu đang được xử lý.");
@@ -183,10 +183,10 @@ namespace SmartBoardingHouse.Controllers
         //{
         //    var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
         //    if (item is null)
-        //        return NotFound(Message.NotFound("MaintenanceRequest"));
+        //        return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
         //    await _collection.DeleteOneAsync(x => x.Id == id);
-        //    return Ok(Message.Deleted("MaintenanceRequest"));
+        //    return Ok(CommonMessage.Deleted("MaintenanceRequest"));
         //}
 
         // ==================== HELPERS ====================

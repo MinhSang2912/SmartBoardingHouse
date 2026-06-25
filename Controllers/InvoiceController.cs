@@ -2,13 +2,14 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
+using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -52,7 +53,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (invoice is null)
-                return NotFound(Message.NotFound("Hóa đơn"));
+                return NotFound(CommonMessage.NotFound("Hóa đơn"));
 
             return Ok(MapToResponse(invoice));
         }
@@ -67,20 +68,20 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.InvoiceNumber == request.InvoiceNumber)
                 .AnyAsync();
             if (invoiceExists)
-                errors.Add(Message.InvoiceNumberExists());
+                errors.Add(CommonMessage.InvoiceNumberExists());
 
             var roomExists = await _roomCollection
                 .Find(x => x.RoomNumber == request.RoomNumber)
                 .AnyAsync();
             if (!roomExists)
-                errors.Add(Message.NotFound("Phòng"));
+                errors.Add(CommonMessage.NotFound("Phòng"));
             
             var userExists = await _userCollection
                 .Find(x => x.Name == request.TenantName)
                 .AnyAsync();
             
             if (!userExists)
-                errors.Add(Message.NotFound("Người thuê"));
+                errors.Add(CommonMessage.NotFound("Người thuê"));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -103,7 +104,7 @@ namespace SmartBoardingHouse.Controllers
 
         //    var existingInvoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
         //    if (existingInvoice is null)
-        //        return NotFound(Message.NotFound("Invoice"));
+        //        return NotFound(CommonMessage.NotFound("Invoice"));
 
         //    var invoiceExists = await _collection
         //        .Find(x => x.InvoiceNumber == request.InvoiceNumber && x.Id != id)
@@ -115,7 +116,7 @@ namespace SmartBoardingHouse.Controllers
         //        .Find(x => x.RoomNumber == request.RoomNumber)
         //        .AnyAsync();
         //    if (!roomExists)
-        //        errors.Add(Message.NotFound("Room"));
+        //        errors.Add(CommonMessage.NotFound("Room"));
 
         //    if (errors.Any())
         //        return BadRequest(errors);
@@ -135,10 +136,10 @@ namespace SmartBoardingHouse.Controllers
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (invoice is null)
-                return NotFound(Message.NotFound("Hóa đơn"));
+                return NotFound(CommonMessage.NotFound("Hóa đơn"));
 
             if (invoice.Status == InvoiceStatus.Paid)
-                return BadRequest(Message.InvoiceAlreadyPaid());
+                return BadRequest(CommonMessage.InvoiceAlreadyPaid());
 
             await _collection.UpdateOneAsync(
                 x => x.Id == id,
@@ -163,10 +164,10 @@ namespace SmartBoardingHouse.Controllers
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (invoice is null)
-                return NotFound(Message.NotFound("Hóa đơn"));
+                return NotFound(CommonMessage.NotFound("Hóa đơn"));
 
             await _collection.DeleteOneAsync(x => x.Id == id);
-            return Ok(Message.Deleted("Hóa đơn"));
+            return Ok(CommonMessage.Deleted("Hóa đơn"));
         }
 
         // ==================== HELPERS ====================

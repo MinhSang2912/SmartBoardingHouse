@@ -11,6 +11,7 @@ namespace SmartBoardingHouse.Models.Request
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string IDCardNumber { get; set; } = string.Empty;
+        public string? Address {get; set; }
     }
 
     public class UserRequestValidation : AbstractValidator<UserRequest>

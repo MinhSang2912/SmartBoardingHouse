@@ -2,13 +2,14 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
+using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -63,7 +64,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var reading = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (reading is null)
-                return NotFound(Message.NotFound("Số công tơ"));
+                return NotFound(CommonMessage.NotFound("Số công tơ"));
 
             var contracts = await _contractCollection.Find(_ => true).ToListAsync();
             return Ok(MapToResponse(reading, contracts));
@@ -97,9 +98,9 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.RoomNumber == request.RoomNumber)
                 .FirstOrDefaultAsync();
             if (room == null)
-                errors.Add(Message.NotFound("Phòng"));
+                errors.Add(CommonMessage.NotFound("Phòng"));
             else if (room.Status != RoomStatus.Occupied)
-                errors.Add(Message.MeterReadingRoomNotOccupied());
+                errors.Add(CommonMessage.MeterReadingRoomNotOccupied());
 
                 var now = DateTime.Now;
 
@@ -111,12 +112,12 @@ namespace SmartBoardingHouse.Controllers
                          && x.Year == now.Year)
                 .AnyAsync();
             if (duplicate)
-                errors.Add(Message.MeterReadingAlreadyExists());
+                errors.Add(CommonMessage.MeterReadingAlreadyExists());
 
             // Lấy chỉ số tháng trước cùng loại
             var prevReading = await GetPreviousReading(request.RoomNumber, request.Type, now.Month, now.Year);
             if (prevReading is not null && request.MeterIndex < prevReading.CurrentIndex)
-                errors.Add(Message.MeterReadingThisMonthMuchHighterLastMonth());
+                errors.Add(CommonMessage.MeterReadingThisMonthMuchHighterLastMonth());
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -124,7 +125,16 @@ namespace SmartBoardingHouse.Controllers
             // Lưu ảnh
             string? photoUrl = null;
             if (request.Photo is not null)
-                photoUrl = await _photoService.SavePhotoAsync(request.Photo);
+            {
+                try
+                {
+                    photoUrl = await _photoService.SaveMeterPhotoAsync(request.Photo, "default");
+                }
+                catch (ArgumentException ex)
+                {
+                    errors.Add(ex.Message);
+                }
+            }
 
             var reading = _mapper.Map<MeterReading>(request);
             reading.Id = await MongoIdHelper.GetNextIdAsync(_collection);
@@ -151,7 +161,7 @@ namespace SmartBoardingHouse.Controllers
 
         //    var existing = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
         //    if (existing is null)
-        //        return NotFound(Message.NotFound("MeterReading"));
+        //        return NotFound(CommonMessage.NotFound("MeterReading"));
 
         //    // Kiểm tra chỉ số mới >= chỉ số cũ (tháng trước)
         //    if (request.MeterIndex < existing.PreviousIndex)
@@ -190,12 +200,25 @@ namespace SmartBoardingHouse.Controllers
         {
             var reading = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (reading is null)
-                return NotFound(Message.NotFound("Số công tơ"));
+                return NotFound(CommonMessage.NotFound("Số công tơ"));
 
-            _photoService.DeletePhoto(reading.PhotoUrl);
+            // Delete photo from Cloudinary if exists
+            if (!string.IsNullOrEmpty(reading.PhotoUrl))
+            {
+                try
+                {
+                    await _photoService.DeletePhotoAsync(reading.PhotoUrl);
+                }
+                catch (Exception ex)
+                {
+                    // Log error but continue with deletion
+                    Console.WriteLine($"Error deleting photo: {ex.Message}");
+                }
+            }
+
             await _collection.DeleteOneAsync(x => x.Id == id);
 
-            return Ok(Message.Deleted("Số côn tơ"));
+            return Ok(CommonMessage.Deleted("Số côn tơ"));
         }
 
         // ==================== HELPERS ====================
