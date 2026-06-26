@@ -21,13 +21,13 @@ namespace SmartBoardingHouse.Controllers
             if (userId == null)
                 return null;
 
-            return await _userCollection.Find(x => x.Id == userId.Value).FirstOrDefaultAsync();
+            return await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
         }
 
-        protected int? GetCurrentUserId()
+        protected string? GetCurrentUserId()
         {
             var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(idClaim, out var id) ? id : null;
+            return string .IsNullOrWhiteSpace(idClaim) ? null : idClaim;
         }
     }
 }

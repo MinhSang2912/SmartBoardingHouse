@@ -51,7 +51,7 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/Rooms/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<RoomResponse>> GetById(int id)
+        public async Task<ActionResult<RoomResponse>> GetById(string id)
         {
             var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (room is null)
@@ -87,7 +87,6 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest(errors);
 
             var room = _mapper.Map<Room>(request);
-            room.Id = await MongoIdHelper.GetNextIdAsync(_collection);
             room.CreatedAt = DateTime.UtcNow;
 
             await _collection.InsertOneAsync(room);
@@ -104,7 +103,7 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/Rooms/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<RoomResponse>> Update(int id, RoomRequest request)
+        public async Task<ActionResult<RoomResponse>> Update(string id, RoomRequest request)
         {
             var errors = await ValidateRequest(request);
 
@@ -156,7 +155,7 @@ namespace SmartBoardingHouse.Controllers
 
         // DELETE: api/Rooms/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
             var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (room is null)

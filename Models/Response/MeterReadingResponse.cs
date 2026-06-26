@@ -1,14 +1,14 @@
-﻿using static SmartBoardingHouse.Common.Enums;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Response
 {
     public class MeterReadingResponse
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string RoomNumber { get; set; } = string.Empty;
         public string TenantName { get; set; } = string.Empty;
         public MeterType Type { get; set; }
-        public string TypeLabel { get; set; } = string.Empty; 
+        public string TypeLabel { get; set; } = string.Empty;
         public int Month { get; set; }
         public int Year { get; set; }
         /// <summary>
@@ -29,10 +29,10 @@ namespace SmartBoardingHouse.Models.Response
         /// <summary>
         /// Tiêu thụ, ví dụ: 150 (kWh hoặc m³)
         /// </summary>
-        public double Usage { get; set; }                     
+        public double Usage { get; set; }
         public string UsageLabel { get; set; } = string.Empty;
-        public decimal UnitPrice { get; set; }              
-        public decimal Total { get; set; }                   
+        public decimal UnitPrice { get; set; }
+        public decimal Total { get; set; }
         public string? PhotoUrl { get; set; }
     }
 }

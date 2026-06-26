@@ -49,7 +49,7 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/Contracts/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<ContractResponse>> GetById(int id)
+        public async Task<ActionResult<ContractResponse>> GetById(string id)
         {
             var contract = await _contractCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (contract is null)
@@ -107,7 +107,6 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest(errors);
 
             var contract = _mapper.Map<Contract>(request);
-            contract.Id = await MongoIdHelper.GetNextIdAsync(_contractCollection);
             contract.CreatedAt = DateTime.Now;
 
             await _contractCollection.InsertOneAsync(contract);
@@ -170,7 +169,7 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/Contracts/{id}/terminate
         [HttpPut("{id}/terminate")]
-        public async Task<ActionResult<ContractResponse>> Terminate(int id)
+        public async Task<ActionResult<ContractResponse>> Terminate(string id)
         {
             var contract = await _contractCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (contract is null)
@@ -208,7 +207,7 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/Contracts/{id}/extend
         [HttpPut("{id}/extend")]
-        public async Task<ActionResult<ContractResponse>> Extend(int id, [FromBody] DateTime newEndDate)
+        public async Task<ActionResult<ContractResponse>> Extend(string id, [FromBody] DateTime newEndDate)
         {
             var contract = await _contractCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (contract is null)

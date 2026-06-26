@@ -49,7 +49,7 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/Invoices/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<InvoiceResponse>> GetById(int id)
+        public async Task<ActionResult<InvoiceResponse>> GetById(string id)
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (invoice is null)
@@ -87,7 +87,6 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest(errors);
 
             var invoice = _mapper.Map<Invoice>(request);
-            invoice.Id = await MongoIdHelper.GetNextIdAsync(_collection);
             invoice.CreatedAt = DateTime.UtcNow;
 
             await _collection.InsertOneAsync(invoice);
@@ -132,7 +131,7 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/Invoices/{id}/pay
         [HttpPut("{id}/pay")]
-        public async Task<ActionResult<InvoiceResponse>> MarkAsPaid(int id)
+        public async Task<ActionResult<InvoiceResponse>> MarkAsPaid(string id)
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (invoice is null)
@@ -160,7 +159,7 @@ namespace SmartBoardingHouse.Controllers
 
         // DELETE: api/Invoices/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
             var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (invoice is null)

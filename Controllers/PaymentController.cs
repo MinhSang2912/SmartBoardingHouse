@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
@@ -29,8 +29,8 @@ namespace SmartBoardingHouse.Controllers
         [HttpPost]
         public async Task<ActionResult<PaymentResponse>> Create(PaymentRequest request)
         {
-            if (request.InvoiceId <= 0 || request.Amount <= 0)
-                return BadRequest("Thông tin thanh toán không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(request.InvoiceId) || request.Amount <= 0)
+                return BadRequest(CommonMessage.PaymentRequestInvalid());
 
             var user = await GetCurrentUserAsync();
             if (user is null)
@@ -41,10 +41,10 @@ namespace SmartBoardingHouse.Controllers
                 .FirstOrDefaultAsync();
 
             if (invoice is null)
-                return NotFound("Không tìm thấy hóa đơn.");
+                return NotFound(CommonMessage.NotFound("Hóa đơn"));
 
             if (invoice.Status == InvoiceStatus.Paid)
-                return BadRequest("Hóa đơn đã được thanh toán.");
+                return BadRequest(CommonMessage.InvoiceAlreadyPaid());
 
             var remaining = invoice.Amount - invoice.PaidAmount;
             if (request.Amount > remaining)
@@ -52,7 +52,6 @@ namespace SmartBoardingHouse.Controllers
 
             var payment = new Payment
             {
-                Id = await MongoIdHelper.GetNextIdAsync(_paymentCollection),
                 TenantId = user.Id,
                 InvoiceId = invoice.Id,
                 Amount = request.Amount,
@@ -102,7 +101,7 @@ namespace SmartBoardingHouse.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<PaymentResponse>> GetById(int id)
+        public async Task<ActionResult<PaymentResponse>> GetById(string id)
         {
             var user = await GetCurrentUserAsync();
             if (user is null)

@@ -43,7 +43,7 @@ namespace SmartBoardingHouse.Controllers
 
             user.Name = request.Name;
             user.PhoneNumber = request.PhoneNumber;
-            user.IDCardNumber = request.IDCardNumber;
+            user.IDCard = request.IdCard;
             user.Address = request.Address;
             user.DateOfBirth = request.DateOfBirth;
             user.UpdatedAt = DateTime.UtcNow;
@@ -95,7 +95,7 @@ namespace SmartBoardingHouse.Controllers
                 Name = user.Name,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                IDCardNumber = user.IDCardNumber,
+                IDCard = user.IDCard,
                 RoomNumber = user.RoomNumber,
                 AvatarUrl = user.AvatarUrl,
                 Address = user.Address,

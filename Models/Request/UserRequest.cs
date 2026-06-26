@@ -23,6 +23,10 @@ namespace SmartBoardingHouse.Models.Request
             RuleFor(x => x.IDCardNumber)
                 .NotEmpty().WithMessage(Message.UserIDCardNumberIsRequired())
                 .MinimumLength(10).WithMessage(Message.UserIDCardNumberIsTooShort());
+            RuleFor(x => x.Email)
+                .NotEmpty().WithMessage(Message.LoginEmailIsRequired())
+                .EmailAddress().WithMessage(Message.LoginEmailIsInvalid());
+
         }
     }
 }

@@ -56,5 +56,13 @@
             Electric = 0,
             Water = 1
         }
+
+        public enum MaintenanceCategory
+        {
+            Electrical = 0,
+            Plumbing = 1,
+            Furniture = 2,
+            Other = 3
+        }
     }
 }

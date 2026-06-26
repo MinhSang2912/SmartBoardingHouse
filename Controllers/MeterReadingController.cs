@@ -60,7 +60,7 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/MeterReadings/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<MeterReadingResponse>> GetById(int id)
+        public async Task<ActionResult<MeterReadingResponse>> GetById(string id)
         {
             var reading = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (reading is null)
@@ -137,7 +137,6 @@ namespace SmartBoardingHouse.Controllers
             }
 
             var reading = _mapper.Map<MeterReading>(request);
-            reading.Id = await MongoIdHelper.GetNextIdAsync(_collection);
             reading.Month = now.Month;
             reading.Year = now.Year;
             reading.PreviousIndex = prevReading?.CurrentIndex ?? 0;
@@ -196,7 +195,7 @@ namespace SmartBoardingHouse.Controllers
 
         // DELETE: api/MeterReadings/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
             var reading = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (reading is null)

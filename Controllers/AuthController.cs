@@ -76,7 +76,6 @@ namespace SmartBoardingHouse.Controllers
 
             var user = new User
             {
-                Id = await MongoIdHelper.GetNextIdAsync(_userCollection),
                 Name = request.Name,
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
@@ -145,8 +144,10 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest("Current password and new password are required.");
 
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (string.IsNullOrEmpty(userIdClaim))
                 return Unauthorized();
+
+            var userId = userIdClaim;
 
             var user = await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
             if (user is null)
@@ -167,8 +168,10 @@ namespace SmartBoardingHouse.Controllers
         public async Task<IActionResult> Logout()
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (string.IsNullOrEmpty(userIdClaim))
                 return Unauthorized();
+
+            var userId = userIdClaim;
 
             var user = await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
             if (user is null)

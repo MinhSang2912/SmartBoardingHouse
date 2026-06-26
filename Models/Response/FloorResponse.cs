@@ -1,4 +1,4 @@
-﻿namespace SmartBoardingHouse.Models.Response
+namespace SmartBoardingHouse.Models.Response
 {
     public class FloorResponse
     {
@@ -10,8 +10,8 @@
 
     public class FloorItemResponse
     {
-        public int Id { get; set; }
-        public int FloorNumber { get; set; } 
+        public string Id { get; set; } = string.Empty;
+        public int FloorNumber { get; set; }
         public int RoomCount { get; set; }
         public int OccupiedRooms { get; set; }
         public int EmptyRooms { get; set; }

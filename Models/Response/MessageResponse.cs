@@ -2,9 +2,9 @@ namespace SmartBoardingHouse.Models.Response
 {
     public class MessageResponse
     {
-        public int Id { get; set; }
-        public int SenderId { get; set; }
-        public int ReceiverId { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string SenderId { get; set; } = string.Empty;
+        public string ReceiverId { get; set; } = string.Empty;
         public string SenderModel { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;

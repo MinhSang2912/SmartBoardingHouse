@@ -1,14 +1,34 @@
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace SmartBoardingHouse.Models.Entity
 {
     public class Notification : BaseModel
     {
-        public int UserId { get; set; }
+        [BsonElement("user")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string UserId { get; set; } = string.Empty;
+
+        [BsonElement("title")]
         public string Title { get; set; } = string.Empty;
+
+        [BsonElement("body")]
         public string Body { get; set; } = string.Empty;
+
+        [BsonElement("type")]
         public string Type { get; set; } = "general";
-        public int? RefId { get; set; }
+
+        [BsonElement("refId")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string? RefId { get; set; }
+
+        [BsonElement("refModel")]
         public string? RefModel { get; set; }
+
+        [BsonElement("isRead")]
         public bool IsRead { get; set; }
+
+        [BsonElement("readAt")]
         public DateTime? ReadAt { get; set; }
     }
 }

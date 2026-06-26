@@ -92,7 +92,6 @@ namespace SmartBoardingHouse.Controllers
         //        return BadRequest(errors);
 
         //    var item = _mapper.Map<MaintenanceRequest>(request);
-        //    item.Id = await MongoIdHelper.GetNextIdAsync(_collection);
         //    item.CreatedAt = DateTime.UtcNow;
 
         //    await _collection.InsertOneAsync(item);
@@ -131,14 +130,14 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/MaintenanceRequests/{id}/start
         [HttpPut("{id}/start")]
-        public async Task<ActionResult<MaintenanceRequestResponse>> Start(int id)
+        public async Task<ActionResult<MaintenanceRequestResponse>> Start(string id)
         {
             var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (item is null)
                 return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
             if (item.Status != MaintenanceStatus.Pending)
-                return BadRequest("Chỉ có thể bắt đầu xử lý yêu cầu đang chờ.");
+                return BadRequest(CommonMessage.JustStartThePendingRequest());
 
             await _collection.UpdateOneAsync(
                 x => x.Id == id,
@@ -152,14 +151,14 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/MaintenanceRequests/{id}/complete
         [HttpPut("{id}/complete")]
-        public async Task<ActionResult<MaintenanceRequestResponse>> Complete(int id)
+        public async Task<ActionResult<MaintenanceRequestResponse>> Complete(string id)
         {
             var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (item is null)
                 return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
             if (item.Status != MaintenanceStatus.InProgress)
-                return BadRequest("Chỉ có thể hoàn thành yêu cầu đang được xử lý.");
+                return BadRequest(CommonMessage.JustCompleteTheInProgressRequest());
 
             await _collection.UpdateOneAsync(
                 x => x.Id == id,

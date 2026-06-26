@@ -2,7 +2,7 @@ namespace SmartBoardingHouse.Models.Request
 {
     public class NotificationReadRequest
     {
-        public List<int>? NotificationIds { get; set; }
+        public List<string>? NotificationIds { get; set; }
         public bool All { get; set; }
     }
 }

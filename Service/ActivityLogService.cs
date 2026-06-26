@@ -28,18 +28,37 @@ namespace SmartBoardingHouse.Services
                 Description = description,
                 Amount = amount,
                 CreatedAt = DateTime.UtcNow
+                // Không gán Id nữa, để MongoDB tự sinh ObjectId
             };
 
-            // Id tự tăng
-            var last = await _collection
-                .Find(_ => true)
-                .SortByDescending(x => x.Id)
-                .Limit(1)
-                .FirstOrDefaultAsync();
-
-            log.Id = last == null ? 1 : last.Id + 1;
-
             await _collection.InsertOneAsync(log);
+        }
+
+        /// <summary>
+        /// Lấy lịch sử hoạt động theo phòng hoặc người dùng (tùy chọn)
+        /// </summary>
+        public async Task<List<ActivityLog>> GetLogsAsync(
+            string? roomNumber = null,
+            string? userName = null,
+            int limit = 50)
+        {
+            var filter = Builders<ActivityLog>.Filter.Empty;
+
+            if (!string.IsNullOrEmpty(roomNumber))
+            {
+                filter &= Builders<ActivityLog>.Filter.Eq(x => x.RoomNumber, roomNumber);
+            }
+
+            if (!string.IsNullOrEmpty(userName))
+            {
+                filter &= Builders<ActivityLog>.Filter.Eq(x => x.UserName, userName);
+            }
+
+            return await _collection
+                .Find(filter)
+                .SortByDescending(x => x.CreatedAt)
+                .Limit(limit)
+                .ToListAsync();
         }
     }
 }

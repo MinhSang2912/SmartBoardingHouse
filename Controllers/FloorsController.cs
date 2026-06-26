@@ -29,7 +29,6 @@ namespace SmartBoardingHouse.Controllers
             _mapper = mapper;
         }
 
-        // GET: api/Floors
         [HttpGet]
         public async Task<ActionResult<FloorResponse>> GetAll()
         {
@@ -38,7 +37,6 @@ namespace SmartBoardingHouse.Controllers
 
             var floorItems = floors.Select(floor =>
             {
-                // So sánh Id của Floor với FloorId của Room
                 var roomsOnFloor = rooms.Where(r => r.FloorId == floor.Id).ToList();
 
                 var occupiedRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Occupied);
@@ -68,22 +66,11 @@ namespace SmartBoardingHouse.Controllers
             return Ok(response);
         }
 
-        // GET: api/Floors/{id}
-        //[HttpGet("{id}")]
-        //public async Task<ActionResult<Floor>> GetById(int id)
-        //{
-        //    var floor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
-        //    return floor is null ? NotFound(CommonMessage.NotFound("Floor")) : Ok(floor);
-        //}
-
-        // POST: api/Floors
         [HttpPost]
         public async Task<ActionResult<Floor>> Create(FloorRequest request)
         {
             var validationResult = await _validator.ValidateAsync(request);
-            var errors = validationResult.Errors
-                                .Select(e => e.ErrorMessage)
-                                .ToList();
+            var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
 
             var floorNumberExists = await _floorCollection
                 .Find(x => x.FloorNumber == request.FloorNumber)
@@ -96,7 +83,6 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest(errors);
 
             var floor = _mapper.Map<Floor>(request);
-            floor.Id = await MongoIdHelper.GetNextIdAsync(_floorCollection);
             floor.CreatedAt = DateTime.UtcNow;
 
             await _floorCollection.InsertOneAsync(floor);
@@ -104,14 +90,12 @@ namespace SmartBoardingHouse.Controllers
             return CreatedAtAction(nameof(GetAll), new { id = floor.Id }, floor);
         }
 
-        // PUT: api/Floors/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<Floor>> Update(int id, FloorRequest updatedFloor)
+        public async Task<ActionResult<Floor>> Update(string id, FloorRequest updatedFloor)
         {
             var validationResult = await _validator.ValidateAsync(updatedFloor);
-            var errors = validationResult.Errors
-                                .Select(e => e.ErrorMessage)
-                                .ToList();
+            var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
                 return NotFound(CommonMessage.NotFound("Tầng"));
@@ -121,22 +105,24 @@ namespace SmartBoardingHouse.Controllers
 
             var floor = _mapper.Map<Floor>(updatedFloor);
             floor.Id = id;
-            var result = await _floorCollection.ReplaceOneAsync(x => x.Id == id, floor);
+            floor.UpdatedAt = DateTime.UtcNow;
+
+            await _floorCollection.ReplaceOneAsync(x => x.Id == id, floor);
 
             return Ok(CommonMessage.Updated("Tầng"));
         }
 
-        // DELETE: api/Floors/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
                 return NotFound(CommonMessage.NotFound("Tầng"));
 
-            if(existingFloor.RoomCount != 0)
+            if (existingFloor.RoomCount != 0)
                 return BadRequest(CommonMessage.FloorHasRooms());
-            var result = await _floorCollection.DeleteOneAsync(x => x.Id == id);
+
+            await _floorCollection.DeleteOneAsync(x => x.Id == id);
             return Ok(CommonMessage.Deleted("Tầng"));
         }
     }

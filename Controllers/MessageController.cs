@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
+using CommonMessage= SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
@@ -40,7 +40,7 @@ namespace SmartBoardingHouse.Controllers
         }
 
         [HttpGet("{userId}")]
-        public async Task<ActionResult<List<MessageResponse>>> GetMessagesWith(int userId, int page = 1, int limit = 30)
+        public async Task<ActionResult<List<MessageResponse>>> GetMessagesWith(string userId, int page = 1, int limit = 30)
         {
             var currentUser = await GetCurrentUserAsync();
             if (currentUser is null)
@@ -77,16 +77,15 @@ namespace SmartBoardingHouse.Controllers
             if (user is null)
                 return Unauthorized();
 
-            if (request.ReceiverId <= 0 || string.IsNullOrWhiteSpace(request.Content))
-                return BadRequest("Thông tin tin nhắn không hợp lệ.");
+            if (string.IsNullOrWhiteSpace(request.Content))
+                return BadRequest(CommonMessage.MaintenanceRequestIsInvalid());
 
             var receiverExists = await _userCollection.Find(x => x.Id == request.ReceiverId).AnyAsync();
             if (!receiverExists)
-                return NotFound("Người nhận không tồn tại.");
+                return NotFound(CommonMessage.NotFound("Người dùng"));
 
             var message = new MessageEntity
             {
-                Id = await MongoIdHelper.GetNextIdAsync(_collection),
                 SenderId = user.Id,
                 ReceiverId = request.ReceiverId,
                 SenderModel = "Tenant",
@@ -101,7 +100,7 @@ namespace SmartBoardingHouse.Controllers
         }
 
         [HttpGet("detail/{id}")]
-        public async Task<ActionResult<MessageResponse>> GetById(int id)
+        public async Task<ActionResult<MessageResponse>> GetById(string id)
         {
             var user = await GetCurrentUserAsync();
             if (user is null)
@@ -109,7 +108,7 @@ namespace SmartBoardingHouse.Controllers
 
             var message = await _collection.Find(m => m.Id == id && (m.SenderId == user.Id || m.ReceiverId == user.Id)).FirstOrDefaultAsync();
             if (message is null)
-                return NotFound("Tin nhắn không tìm thấy.");
+                return NotFound(CommonMessage.NotFound("Tin nhắn"));
 
             return Ok(MapToResponse(message));
         }

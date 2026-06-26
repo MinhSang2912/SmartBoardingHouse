@@ -73,6 +73,7 @@
 
         #region MaintenanceRequest
         public static string MaintenanceRoomNumberIsRequired() => "Số phòng là bắt buộc.";
+        public static string MaintenanceRequestIsInvalid() => "Yêu cầu bảo trì không hợp lệ.";
         public static string MaintenanceTenantNameIsRequired() => "Tên người thuê là bắt buộc.";
         public static string MaintenanceRequestNumberIsRequired() => "Mã yêu cầu bảo trì là bắt buộc.";
         public static string MaintenanceTitleIsRequired() => "Tiêu đề là bắt buộc.";
@@ -81,6 +82,8 @@
         public static string MaintenanceDescriptionIsTooLong() => "Mô tả không được vượt quá 1000 ký tự.";
         public static string MaintenanceStatusIsInvalid() => "Trạng thái yêu cầu bảo trì không hợp lệ.";
         public static string MaintenancePriorityIsInvalid() => "Mức độ ưu tiên không hợp lệ.";
+        public static string JustStartThePendingRequest() => "Chỉ có thể bắt đầu xử lý yêu cầu đang chờ.";
+        public static string JustCompleteTheInProgressRequest() => "Chỉ có thể hoàn thành yêu cầu đang được xử lý.";
         public static string MaintenanceRequestExists(string roomNumber, string title) => $"Yêu cầu bảo trì cho phòng '{roomNumber}' với tiêu đề '{title}' đã tồn tại.";
         #endregion
 
@@ -93,6 +96,11 @@
         public static string MeterReadingAlreadyExists() => "Số công tơ này đã có";
         public static string MeterReadingThisMonthMuchHighterLastMonth() => "Số tháng này phải lớn hơn số trước";
         public static string MeterReadingRoomNotOccupied() => "Phòng này không có người thuê";
+        #endregion
+
+        #region Payment
+        public static string PaymentInvoiceNumberIsRequired() => "Số hóa đơn là bắt buộc.";
+        public static string PaymentRequestInvalid() => "Yêu cầu thanh toán không hợp lệ.";
         #endregion
 
         #region Login
