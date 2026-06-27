@@ -9,7 +9,6 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
-using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -64,19 +63,22 @@ namespace SmartBoardingHouse.Controllers
         {
             var errors = await ValidateRequest(request);
 
+            // Số hợp đồng tồn tại 
             var contractExists = await _contractCollection
                 .Find(x => x.ContractNumber == request.ContractNumber)
                 .AnyAsync();
             if (contractExists)
                 errors.Add(CommonMessage.ContractNumberExists(request.ContractNumber));
 
-            var room = await _roomCollection
+            //Số phòng tồn tại
+            var roomExists = await _roomCollection
                 .Find(x => x.RoomNumber == request.RoomNumber)
                 .FirstOrDefaultAsync();
-            if (room is null)
+            if (roomExists is null)
                 errors.Add(CommonMessage.NotFound("Phòng"));
 
-            if (room is not null)
+            //Phòng đã có hợp đồng đang hiệu lực
+            if (roomExists is not null)
             {
                 var activeContractExists = await _contractCollection
                     .Find(x => x.RoomNumber == request.RoomNumber
@@ -86,14 +88,16 @@ namespace SmartBoardingHouse.Controllers
                     errors.Add(CommonMessage.ContractRoomIsExists());
             }
 
+            // Người thuê tồn tại
             var userExists = await _userCollection
                 .Find(x => x.Name == request.TenantName)
-                .AnyAsync();
+                .FirstOrDefaultAsync();
 
-            if (!userExists)
+            if (userExists is null)
                 errors.Add(CommonMessage.NotFound("Người thuê"));
-            
-            if (userExists)
+
+            // Người thuê đã có hợp đồng đang hiệu lực
+            if (userExists is not null)
                 {
                 var activeContractExistsForTenant = await _contractCollection
                     .Find(x => x.TenantName == request.TenantName
@@ -106,8 +110,17 @@ namespace SmartBoardingHouse.Controllers
             if (errors.Any())
                 return BadRequest(errors);
 
+            if (roomExists is null || userExists is null)
+            {
+                return BadRequest(CommonMessage.NotFound("Phòng hoặc Người thuê"));
+            }    
             var contract = _mapper.Map<Contract>(request);
             contract.CreatedAt = DateTime.Now;
+            contract.Status = ContractStatus.Active;
+            contract.SignedDate = DateTime.Now;
+            contract.RoomId = roomExists.Id;
+            contract.TenantId = userExists.Id;
+            contract.RoomDeposit = roomExists.RoomDeposit;
 
             await _contractCollection.InsertOneAsync(contract);
 
@@ -115,12 +128,14 @@ namespace SmartBoardingHouse.Controllers
                 x => x.RoomNumber == request.RoomNumber,
                 Builders<Room>.Update
                     .Set(x => x.Status, RoomStatus.Occupied)
+                    .Set(x => x.TenantId, userExists.Id)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
             await _userCollection.UpdateOneAsync(
                 x => x.Name == request.TenantName,
                 Builders<User>.Update
                     .Set(x => x.RoomNumber, request.RoomNumber)
+                    .Set(x => x.RoomId, roomExists.Id)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
             await _activityLogService.LogAsync(
@@ -188,11 +203,13 @@ namespace SmartBoardingHouse.Controllers
                 x => x.RoomNumber == contract.RoomNumber,
                 Builders<Room>.Update
                     .Set(x => x.Status, RoomStatus.Available)
+                    .Set(x => x.TenantId, null)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
             await _userCollection.UpdateOneAsync(
                 x => x.Name == contract.TenantName,
                 Builders<User>.Update
                     .Set(x => x.RoomNumber, null)
+                    .Set(x => x.RoomId, null)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
             await _activityLogService.LogAsync(
@@ -215,6 +232,9 @@ namespace SmartBoardingHouse.Controllers
 
             if (newEndDate <= contract.EndDate)
                 return BadRequest("Ngày kết thúc mới phải sau ngày kết thúc hiện tại.");
+
+            if (contract.Status != ContractStatus.Active)
+                return BadRequest(CommonMessage.ContractStatusIsInvalid());
 
             await _contractCollection.UpdateOneAsync(
                 x => x.Id == id,

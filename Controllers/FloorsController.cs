@@ -46,6 +46,8 @@ namespace SmartBoardingHouse.Controllers
                 {
                     Id = floor.Id,
                     FloorNumber = floor.FloorNumber,
+                    Name = floor.Name,
+                    Description = floor.Description,
                     RoomCount = roomsOnFloor.Count,
                     OccupiedRooms = occupiedRooms,
                     EmptyRooms = emptyRooms,
@@ -66,6 +68,15 @@ namespace SmartBoardingHouse.Controllers
             return Ok(response);
         }
 
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Floor>> GetById(string id)
+        {
+            var floor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (floor is null)
+                return NotFound(CommonMessage.NotFound("Tầng"));
+            return Ok(floor);
+        }
+
         [HttpPost]
         public async Task<ActionResult<Floor>> Create(FloorRequest request)
         {
@@ -77,7 +88,7 @@ namespace SmartBoardingHouse.Controllers
                 .AnyAsync();
 
             if (floorNumberExists)
-                errors.Add(CommonMessage.FloorNumberExists(request.FloorNumber));
+                errors.Add(CommonMessage.IsExists("Số Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);
@@ -87,7 +98,7 @@ namespace SmartBoardingHouse.Controllers
 
             await _floorCollection.InsertOneAsync(floor);
 
-            return CreatedAtAction(nameof(GetAll), new { id = floor.Id }, floor);
+            return CreatedAtAction(nameof(GetById), new { id = floor.Id }, floor);
         }
 
         [HttpPut("{id}")]
@@ -99,6 +110,11 @@ namespace SmartBoardingHouse.Controllers
             var existingFloor = await _floorCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingFloor is null)
                 return NotFound(CommonMessage.NotFound("Tầng"));
+            var floorNumberExists = await _floorCollection
+                .Find(x => x.FloorNumber == updatedFloor.FloorNumber && x.Id != id)
+                .AnyAsync();
+            if (floorNumberExists)
+                errors.Add(CommonMessage.IsExists("Số Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);

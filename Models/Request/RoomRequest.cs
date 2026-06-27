@@ -10,7 +10,9 @@ namespace SmartBoardingHouse.Models.Request
         public decimal Price { get; set; }
         public double Area { get; set; }
         public decimal RoomDeposit { get; set; }
+        public int maxOccupants { get; set; } = 2;
         public string FloorId { get; set; } = string.Empty;
+        public string? Description { get; set; }
     }
 
     public class RoomRequestValidation : AbstractValidator<RoomRequest>
@@ -22,6 +24,8 @@ namespace SmartBoardingHouse.Models.Request
             RuleFor(x => x.Area).GreaterThan(0).WithMessage(Message.RoomAreaMustBeGreaterThanZero());
             RuleFor(x => x.RoomDeposit).GreaterThanOrEqualTo(0).WithMessage(Message.RoomDepositMustBeNonNegative());
             RuleFor(x => x.FloorId).NotEmpty().WithMessage(Message.RoomFloorIdIsRequired());
+            RuleFor(x => x.maxOccupants).GreaterThan(0).WithMessage(Message.MaxOccupantsMustBeGreateThanZero());
+            RuleFor(x => x.Description).MaximumLength(200).WithMessage(Message.RoomDescriptionTooLong());
         }
     }
 }

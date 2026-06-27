@@ -12,6 +12,8 @@ namespace SmartBoardingHouse.Models.Response
     {
         public string Id { get; set; } = string.Empty;
         public int FloorNumber { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public int RoomCount { get; set; }
         public int OccupiedRooms { get; set; }
         public int EmptyRooms { get; set; }

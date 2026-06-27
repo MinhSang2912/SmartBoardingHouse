@@ -36,7 +36,7 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<User>> GetById(string id)
         {
             var user = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            return user is null ? NotFound(Message.NotFound("User")) : Ok(user);
+            return user is null ? NotFound(Message.NotFound("Người dùng")) : Ok(user);
         }
 
         [HttpPost]

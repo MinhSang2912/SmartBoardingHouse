@@ -12,28 +12,29 @@ namespace SmartBoardingHouse.Models.Request
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public int PaymentDate { get; set; }
-       
+        public decimal MonthlyRent { get; set; }
     }
 
     public class ContractRequestValidation : AbstractValidator<ContractRequest>
     {
         public ContractRequestValidation()
         {
-            RuleFor(x => x.ContractNumber)
+           RuleFor(x => x.ContractNumber)
                 .NotEmpty().WithMessage(Message.ContractNumberIsRequired());
-            RuleFor(x => x.RoomNumber)
+           RuleFor(x => x.RoomNumber)
                 .NotEmpty().WithMessage(Message.ContractRoomNumberIsRequired());
-            RuleFor(x => x.TenantName)
+           RuleFor(x => x.TenantName)
                 .NotEmpty().WithMessage(Message.ContractTenantNameIsRequired());
-            RuleFor(x => x.StartDate)
+           RuleFor(x => x.StartDate)
                 .NotEmpty().WithMessage(Message.ContractStartDateIsRequired())
                 .LessThan(x => x.EndDate).WithMessage(Message.ContractStartDateMustBeBeforeEndDate());
-            RuleFor(x => x.EndDate)
+           RuleFor(x => x.EndDate)
                 .NotEmpty().WithMessage(Message.ContractEndDateIsRequired())
                 .GreaterThan(x => x.StartDate).WithMessage(Message.ContractEndDateMustBeAfterStartDate());
-            RuleFor(x => x.PaymentDate)
+           RuleFor(x => x.PaymentDate)
                 .InclusiveBetween(1, 31).WithMessage(Message.ContractPaymentDateIsInvalid());
-           
+           RuleFor(x => x.MonthlyRent)
+                .GreaterThan(0).WithMessage(Message.ContractMonthlyRentMustBeGreaterThanZero());
         }
     }
 }

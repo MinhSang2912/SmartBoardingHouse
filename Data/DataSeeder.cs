@@ -1,7 +1,5 @@
 ﻿using MongoDB.Driver;
-using SmartBoardingHouse.Models;
 using SmartBoardingHouse.Models.Entity;
-using Microsoft.Extensions.Logging;
 using static SmartBoardingHouse.Common.Enums;
 using SmartBoardingHouse.Common;
 

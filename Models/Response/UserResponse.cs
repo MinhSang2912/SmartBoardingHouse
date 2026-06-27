@@ -12,6 +12,7 @@ namespace SmartBoardingHouse.Models.Response
         public string RoomNumber { get; set; } = string.Empty;
         public string AvatarUrl { get; set; } = string.Empty;
         public string? Address { get; set; }
+        public string? DateOfBirth { get; set; }
         // Thông tin bổ sung từ Room
         public decimal RoomDeposit { get; set; }
         public decimal Price { get; set; }

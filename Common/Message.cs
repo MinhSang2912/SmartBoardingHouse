@@ -6,7 +6,8 @@
         public static string NotFound(string entity) => $"{entity} không tìm thấy";
         public static string Updated(string entity) => $"{entity} đã được cập nhật thành công.";
         public static string Deleted(string entity) => $"{entity} đã được xóa thành công.";
-        public static string IdExists(string entity, int id) => $"{entity} với Id {id} đã tồn tại.";
+        public static string IsExists(string entity) => $"{entity} này đã tồn tại.";
+        public static string InvalidId() => "Id không hợp lệ.";
 
         #region User
         public static string UserIdIsRequired() => "Id là bắt buộc.";
@@ -30,13 +31,16 @@
         public static string RoomStatusIsInvalid() => "Trạng thái phòng không hợp lệ.";
         public static string RoomNumberExists() => $"Phòng đã tồn tại.";
         public static string RoomHasActiveContract() => $"Phòng đang có hợp đồng hoạt động.";
+        public static string MaxOccupantsMustBeGreateThanZero() => $"Số lượng người tối đa phải lớn hơn 0.";
+        public static string RoomDescriptionTooLong() => $"Mô tả phòng quá dài.";
         #endregion
 
         #region Floor
         public static string FloorNumberIsRequired() => "Số tầng là bắt buộc.";
+        public static string FloorNameIsRequired() => "Tên tầng là bắt buộc.";
         public static string FloorRoomCountMustBeNonNegative() => "Số lượng phòng phải lớn hơn hoặc bằng 0.";
-        public static string FloorNumberExists(int floorNumber) => $"Tầng số '{floorNumber}' đã tồn tại.";
         public static string FloorHasRooms() => "Tầng này vẫn còn phòng.";
+        public static string FloorDescriptionIsTooLong() => "Mô tả tầng quá dài.";
         #endregion
 
         #region Contract
@@ -51,6 +55,8 @@
         public static string ContractEndDateMustBeAfterStartDate() => "Ngày kết thúc phải sau ngày bắt đầu.";
         public static string ContractPaymentDateIsInvalid() => "Ngày thanh toán phải nằm trong khoảng từ 1 đến 31.";
         public static string ContractStatusIsInvalid() => "Trạng thái hợp đồng không hợp lệ.";
+        public static string ContractMonthlyRentMustBeGreaterThanZero() => "Tiền thuê hàng tháng phải lớn hơn 0.";
+        public static string ContractDepositMustBeNonNegative() => "Tiền đặt cọc phải lớn hơn hoặc bằng 0.";
         public static string ContractNumberExists(string contractNumber) => $"Hợp đồng số '{contractNumber}' đã tồn tại.";
         #endregion
 

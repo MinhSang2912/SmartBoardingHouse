@@ -41,7 +41,7 @@ namespace SmartBoardingHouse.Controllers
             if (!validationResult.IsValid)
                 return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
-            // Tìm user theo email + role
+            // Tìm user theo email
             var user = await _userCollection
                 .Find(x => x.Email == request.Email)
                 .FirstOrDefaultAsync();

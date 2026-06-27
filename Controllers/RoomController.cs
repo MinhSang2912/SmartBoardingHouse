@@ -61,8 +61,15 @@ namespace SmartBoardingHouse.Controllers
             var activeContracts = await _contractCollection
                 .Find(c => c.Status == ContractStatus.Active)
                 .ToListAsync();
-
-            return Ok(MapToResponse(room, floors, activeContracts));
+            try
+            {
+                var response = MapToResponse(room, floors, activeContracts);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi khi xử lý dữ liệu: {ex.Message}");
+            }
         }
 
         // POST: api/Rooms
@@ -91,12 +98,8 @@ namespace SmartBoardingHouse.Controllers
 
             await _collection.InsertOneAsync(room);
 
-            // Tăng RoomCount của tầng
-            await _floorCollection.UpdateOneAsync(
-                x => x.Id == request.FloorId,
-                Builders<Floor>.Update.Inc(x => x.RoomCount, 1));
-
             var floors = await _floorCollection.Find(_ => true).ToListAsync();
+
             return CreatedAtAction(nameof(GetById), new { id = room.Id },
                 MapToResponse(room, floors, new List<Contract>()));
         }
@@ -133,18 +136,6 @@ namespace SmartBoardingHouse.Controllers
 
             await _collection.ReplaceOneAsync(x => x.Id == id, updatedRoom);
 
-            // Nếu đổi tầng thì cập nhật RoomCount của cả 2 tầng
-            if (existingRoom.FloorId != request.FloorId)
-            {
-                await _floorCollection.UpdateOneAsync(
-                    x => x.Id == existingRoom.FloorId,
-                    Builders<Floor>.Update.Inc(x => x.RoomCount, -1));
-
-                await _floorCollection.UpdateOneAsync(
-                    x => x.Id == request.FloorId,
-                    Builders<Floor>.Update.Inc(x => x.RoomCount, 1));
-            }
-
             var floors = await _floorCollection.Find(_ => true).ToListAsync();
             var activeContracts = await _contractCollection
                 .Find(c => c.Status == ContractStatus.Active)
@@ -167,10 +158,6 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest(CommonMessage.RoomHasActiveContract());
 
             await _collection.DeleteOneAsync(x => x.Id == id);
-
-            await _floorCollection.UpdateOneAsync(
-                x => x.Id == room.FloorId,
-                Builders<Floor>.Update.Inc(x => x.RoomCount, -1));
 
             return Ok(CommonMessage.Deleted("Phòng"));
         }

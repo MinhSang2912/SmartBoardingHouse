@@ -10,8 +10,9 @@ namespace SmartBoardingHouse.Models.Request
         public string Password { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
-        public string IDCardNumber { get; set; } = string.Empty;
+        public string IDCard { get; set; } = string.Empty;
         public string? Address {get; set; }
+        public string? DateOfbirth { get; set; }
     }
 
     public class UserRequestValidation : AbstractValidator<UserRequest>
@@ -20,7 +21,7 @@ namespace SmartBoardingHouse.Models.Request
         {
             RuleFor(x => x.Name)
                .NotEmpty().WithMessage(Message.UserNameIsRequired());
-            RuleFor(x => x.IDCardNumber)
+            RuleFor(x => x.IDCard)
                 .NotEmpty().WithMessage(Message.UserIDCardNumberIsRequired())
                 .MinimumLength(10).WithMessage(Message.UserIDCardNumberIsTooShort());
             RuleFor(x => x.Email)
