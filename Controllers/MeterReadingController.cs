@@ -9,7 +9,6 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
-using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -87,69 +86,80 @@ namespace SmartBoardingHouse.Controllers
         }
 
         // POST: api/MeterReadings
-        [HttpPost]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<MeterReadingResponse>> Create([FromForm] MeterReadingRequest request)
-        {
-            var errors = await ValidateRequest(request);
+        //[HttpPost]
+        //[Consumes("multipart/form-data")]
+        //public async Task<ActionResult<MeterReadingResponse>> Create([FromForm] MeterReadingRequest request)
+        //{
+        //    var errors = await ValidateRequest(request);
 
-            // Kiểm tra phòng tồn tại
-            var room = await _roomCollection
-                .Find(x => x.RoomNumber == request.RoomNumber)
-                .FirstOrDefaultAsync();
-            if (room == null)
-                errors.Add(CommonMessage.NotFound("Phòng"));
-            else if (room.Status != RoomStatus.Occupied)
-                errors.Add(CommonMessage.MeterReadingRoomNotOccupied());
+        //    // Kiểm tra phòng tồn tại
+        //    var room = await _roomCollection
+        //        .Find(x => x.RoomNumber == request.RoomNumber)
+        //        .FirstOrDefaultAsync();
+        //    if (room == null)
+        //        errors.Add(CommonMessage.NotFound("Phòng"));
+        //    else if (room.Status != RoomStatus.Occupied)
+        //        errors.Add(CommonMessage.MeterReadingRoomNotOccupied());
+            
+        //    var now = DateTime.Now;
 
-                var now = DateTime.Now;
+        //    // Kiểm tra đã có chỉ số cùng loại trong tháng này chưa
+        //    var duplicate = await _collection
+        //        .Find(x => x.RoomNumber == request.RoomNumber
+        //                 && x.Type == request.Type
+        //                 && x.Month == now.Month
+        //                 && x.Year == now.Year)
+        //        .AnyAsync();
+        //    if (duplicate)
+        //        errors.Add(CommonMessage.MeterReadingAlreadyExists());
 
-            // Kiểm tra đã có chỉ số cùng loại trong tháng này chưa
-            var duplicate = await _collection
-                .Find(x => x.RoomNumber == request.RoomNumber
-                         && x.Type == request.Type
-                         && x.Month == now.Month
-                         && x.Year == now.Year)
-                .AnyAsync();
-            if (duplicate)
-                errors.Add(CommonMessage.MeterReadingAlreadyExists());
+        //    // Lấy chỉ số tháng trước cùng loại
+        //    var prevReading = await GetPreviousReading(request.RoomNumber, request.Type, now.Month, now.Year);
+        //    if (prevReading is not null && request.CurrentIndex < prevReading.CurrentIndex)
+        //        errors.Add(CommonMessage.MeterReadingThisMonthMuchHighterLastMonth());
 
-            // Lấy chỉ số tháng trước cùng loại
-            var prevReading = await GetPreviousReading(request.RoomNumber, request.Type, now.Month, now.Year);
-            if (prevReading is not null && request.MeterIndex < prevReading.CurrentIndex)
-                errors.Add(CommonMessage.MeterReadingThisMonthMuchHighterLastMonth());
+        //    // Lưu ảnh
+        //    string? photoUrl = null;
+        //    if (request.Photo is not null)
+        //    {
+        //        try
+        //        {
+        //            photoUrl = await _photoService.SaveMeterPhotoAsync(request.Photo, "default");
+        //        }
+        //        catch (ArgumentException ex)
+        //        {
+        //            errors.Add(ex.Message);
+        //        }
+        //    }
 
-            if (errors.Any())
-                return BadRequest(errors);
+        //    if (errors.Any())
+        //        return BadRequest(errors);
 
-            // Lưu ảnh
-            string? photoUrl = null;
-            if (request.Photo is not null)
-            {
-                try
-                {
-                    photoUrl = await _photoService.SaveMeterPhotoAsync(request.Photo, "default");
-                }
-                catch (ArgumentException ex)
-                {
-                    errors.Add(ex.Message);
-                }
-            }
+        //    var contract = await _contractCollection
+        //        .Find(c => c.RoomNumber == request.RoomNumber && c.Status == ContractStatus.Active)
+        //        .FirstOrDefaultAsync();
+        //    if (contract is null)
+        //        return BadRequest(CommonMessage.MaintenanceRoomNotOccupied());
 
-            var reading = _mapper.Map<MeterReading>(request);
-            reading.Month = now.Month;
-            reading.Year = now.Year;
-            reading.PreviousIndex = prevReading?.CurrentIndex ?? 0;
-            reading.Usage = request.MeterIndex - reading.PreviousIndex;
-            reading.PhotoUrl = photoUrl;
-            reading.CreatedAt = DateTime.UtcNow;
+        //    var reading = _mapper.Map<MeterReading>(request);
+        //    reading.Month = now.Month;
+        //    reading.Year = now.Year;
+        //    reading.RoomId=contract.RoomId;
+        //    reading.TenantId=contract.TenantId;
+        //    reading.PreviousIndex = prevReading?.CurrentIndex ?? 0;
+        //    reading.CurrentIndex = request.CurrentIndex;
+        //    reading.Usage = request.CurrentIndex - reading.PreviousIndex;
+        //    reading.UnitPrice = request.Type == MeterType.Electric ? ElectricUnitPrice : WaterUnitPrice;
+        //    reading.TotalCost = (decimal)reading.Usage * reading.UnitPrice;
+        //    reading.PhotoUrl = photoUrl;
+        //    reading.CreatedAt = DateTime.UtcNow;
 
-            await _collection.InsertOneAsync(reading);
+        //    await _collection.InsertOneAsync(reading);
 
-            var contracts = await _contractCollection.Find(_ => true).ToListAsync();
-            return CreatedAtAction(nameof(GetById), new { id = reading.Id },
-                MapToResponse(reading, contracts));
-        }
+        //    var contracts = await _contractCollection.Find(_ => true).ToListAsync();
+        //    return CreatedAtAction(nameof(GetById), new { id = reading.Id },
+        //        MapToResponse(reading, contracts));
+        //}
 
         // PUT: api/MeterReadings/{id}
         //[HttpPut("{id}")]
@@ -194,31 +204,31 @@ namespace SmartBoardingHouse.Controllers
         //}
 
         // DELETE: api/MeterReadings/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
-        {
-            var reading = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            if (reading is null)
-                return NotFound(CommonMessage.NotFound("Số công tơ"));
+        //[HttpDelete("{id}")]
+        //public async Task<IActionResult> Delete(string id)
+        //{
+        //    var reading = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+        //    if (reading is null)
+        //        return NotFound(CommonMessage.NotFound("Số công tơ"));
 
-            // Delete photo from Cloudinary if exists
-            if (!string.IsNullOrEmpty(reading.PhotoUrl))
-            {
-                try
-                {
-                    await _photoService.DeletePhotoAsync(reading.PhotoUrl);
-                }
-                catch (Exception ex)
-                {
-                    // Log error but continue with deletion
-                    Console.WriteLine($"Error deleting photo: {ex.Message}");
-                }
-            }
+        //    // Delete photo from Cloudinary if exists
+        //    if (!string.IsNullOrEmpty(reading.PhotoUrl))
+        //    {
+        //        try
+        //        {
+        //            await _photoService.DeletePhotoAsync(reading.PhotoUrl);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            // Log error but continue with deletion
+        //            Console.WriteLine($"Error deleting photo: {ex.Message}");
+        //        }
+        //    }
 
-            await _collection.DeleteOneAsync(x => x.Id == id);
+        //    await _collection.DeleteOneAsync(x => x.Id == id);
 
-            return Ok(CommonMessage.Deleted("Số côn tơ"));
-        }
+        //    return Ok(CommonMessage.Deleted("Số côn tơ"));
+        //}
 
         // ==================== HELPERS ====================
 

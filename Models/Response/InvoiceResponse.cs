@@ -1,3 +1,4 @@
+using SmartBoardingHouse.Models.Entity;
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Response
@@ -25,5 +26,7 @@ namespace SmartBoardingHouse.Models.Response
         public decimal WaterTotal { get; set; }
         public decimal ServiceFee { get; set; }
         public decimal Amount { get; set; }
+        public string? Note { get; set; }
+        public List<InvoiceItem> Items { get; set; } = new();
     }
 }

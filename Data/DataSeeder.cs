@@ -29,7 +29,6 @@ namespace SmartBoardingHouse.Data
                 // Nếu đã có dữ liệu thì bỏ qua seeding
                 if (await floorCol.CountDocumentsAsync(FilterDefinition<Floor>.Empty) > 0)
                 {
-                    Log("Dữ liệu đã tồn tại, bỏ qua seeding.");
                     return;
                 }
 
@@ -55,7 +54,7 @@ namespace SmartBoardingHouse.Data
                         Email = "chunha@example.com",
                         Password = PasswordHelper.Hash("Abc@1234"),
                         PhoneNumber = "0900111222",
-                        IDCard = "012345678910",           // Đổi thành IDCard
+                        IDCard = "012345678910",          
                         AvatarUrl = "",
                         Address = "123 Đường ABC, Quận 1",
                         IsActive = true,

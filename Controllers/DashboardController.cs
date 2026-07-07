@@ -5,11 +5,13 @@ using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using static SmartBoardingHouse.Common.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartBoardingHouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class DashboardController : ControllerBase
     {
         private readonly IMongoCollection<Room> _roomCollection;

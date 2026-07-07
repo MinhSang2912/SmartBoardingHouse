@@ -10,7 +10,7 @@ namespace SmartBoardingHouse.Mappings
         public MeterReadingMappingProfile()
         {
             CreateMap<MeterReadingRequest, MeterReading>()
-                .ForMember(dest => dest.CurrentIndex, opt => opt.MapFrom(src => src.MeterIndex))
+                .ForMember(dest => dest.CurrentIndex, opt => opt.MapFrom(src => src.CurrentIndex))
                 .ForMember(dest => dest.Month, opt => opt.Ignore())
                 .ForMember(dest => dest.Year, opt => opt.Ignore())
                 .ForMember(dest => dest.PreviousIndex, opt => opt.Ignore())

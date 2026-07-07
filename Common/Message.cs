@@ -8,6 +8,7 @@
         public static string Deleted(string entity) => $"{entity} đã được xóa thành công.";
         public static string IsExists(string entity) => $"{entity} này đã tồn tại.";
         public static string InvalidId() => "Id không hợp lệ.";
+        public static string DescriptionTooLong() => "Mô tả quá dài.";
 
         #region User
         public static string UserIdIsRequired() => "Id là bắt buộc.";
@@ -75,6 +76,10 @@
         public static string WaterPriceMustBeGreaterThanZero() => "Giá nước phải lớn hơn 0.";
         public static string ServiceFeeIsInvalid() => "Phí dịch vụ phải lớn hơn hoặc bằng 0.";
         public static string InvoiceAlreadyPaid() => "Hóa đơn đã được thanh toán trước đó.";
+        public static string RoomPriceMismatch() => "Giá phòng không khớp với hóa đơn.";
+        public static string InvoiceItemNameIsRequired() => "Tên mục hóa đơn là bắt buộc.";
+        public static string InvoiceItemPriceMustBeGreaterThanZero() => "Giá mục hóa đơn phải lớn hơn 0.";
+        public static string InvoiceItemQuantityMustBeGreaterThanZero() => "Số lượng mục hóa đơn phải lớn hơn 0.";
         #endregion
 
         #region MaintenanceRequest
@@ -91,6 +96,7 @@
         public static string JustStartThePendingRequest() => "Chỉ có thể bắt đầu xử lý yêu cầu đang chờ.";
         public static string JustCompleteTheInProgressRequest() => "Chỉ có thể hoàn thành yêu cầu đang được xử lý.";
         public static string MaintenanceRequestExists(string roomNumber, string title) => $"Yêu cầu bảo trì cho phòng '{roomNumber}' với tiêu đề '{title}' đã tồn tại.";
+        public static string MaintenanceRoomNotOccupied() => "Phòng này không có người thuê";
         #endregion
 
         #region MeterReading
@@ -99,9 +105,10 @@
         public static string MeterReadingYearIsInvalid() => "Năm phải từ 2020 trở đi.";
         public static string MeterReadingElectricityIndexMustBeNonNegative() => "Chỉ số điện phải lớn hơn hoặc bằng 0.";
         public static string MeterReadingWaterIndexMustBeNonNegative() => "Chỉ số nước phải lớn hơn hoặc bằng 0.";
-        public static string MeterReadingAlreadyExists() => "Số công tơ này đã có";
+        public static string MeterReadingAlreadyExists() => "Số công tơ tháng này đã có";
         public static string MeterReadingThisMonthMuchHighterLastMonth() => "Số tháng này phải lớn hơn số trước";
         public static string MeterReadingRoomNotOccupied() => "Phòng này không có người thuê";
+        public static string MeterReadingTypeInValid() => "Loại công tơ không hợp lệ.";
         #endregion
 
         #region Payment

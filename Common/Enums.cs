@@ -29,12 +29,6 @@
             Canceled = 3
         }
 
-        public enum  Role 
-        {
-            Owner = 0,
-            Tenant = 1,
-        }
-
         public enum PriotyRequest
         {
             Low = 0,

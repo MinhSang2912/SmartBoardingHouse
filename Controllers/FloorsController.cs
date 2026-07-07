@@ -1,19 +1,21 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using CommonMessage = SmartBoardingHouse.Common.Message;
+using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using static SmartBoardingHouse.Common.Enums;
-using SmartBoardingHouse.Common;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 
 namespace SmartBoardingHouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class FloorsController : ControllerBase
     {
         private readonly IMongoCollection<Floor> _floorCollection;

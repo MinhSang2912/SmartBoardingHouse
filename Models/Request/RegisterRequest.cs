@@ -11,7 +11,6 @@ namespace SmartBoardingHouse.Models.Request
         public string PhoneNumber { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public string ConfirmPassword { get; set; } = string.Empty;
-        public Role Role { get; set; } = Role.Tenant;
     }
 
     public class RegisterRequestValidation : AbstractValidator<RegisterRequest>
@@ -32,8 +31,6 @@ namespace SmartBoardingHouse.Models.Request
             RuleFor(x => x.ConfirmPassword)
                 .NotEmpty().WithMessage(Message.RegisterConfirmPasswordIsRequired())
                 .Equal(x => x.Password).WithMessage(Message.RegisterPasswordNotMatch());
-            RuleFor(x => x.Role)
-                .IsInEnum().WithMessage(Message.LoginRoleIsInvalid());
         }
     }
 }

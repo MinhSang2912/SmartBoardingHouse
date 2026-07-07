@@ -63,17 +63,14 @@ namespace SmartBoardingHouse.Services
         /// </summary>
         public async Task<string> SaveMeterPhotoAsync(IFormFile photo, string userId)
         {
-            if (photo == null || photo.Length == 0)
-                throw new ArgumentException("Photo cannot be empty");
-
             var allowedFormats = new[] { "jpg", "jpeg", "png", "webp" };
             var extension = Path.GetExtension(photo.FileName).ToLower().TrimStart('.');
 
             if (!allowedFormats.Contains(extension))
-                throw new ArgumentException("Invalid file format. Only jpg, jpeg, png, webp are allowed");
+                throw new ArgumentException("File ảnh không hợp lệ. Chỉ chấp nhận định dạng jpg, jpeg, png, webp.");
 
             if (photo.Length > 10 * 1024 * 1024) // 10MB
-                throw new ArgumentException("File size exceeds 10MB limit");
+                throw new ArgumentException("File ảnh không được vượt quá 10MB.");
 
             using var stream = photo.OpenReadStream();
             var publicId = $"meter_{userId}_{DateTime.UtcNow.Ticks}";

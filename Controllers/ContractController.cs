@@ -9,11 +9,13 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartBoardingHouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ContractsController : ControllerBase
     {
         private readonly IMongoCollection<Contract> _contractCollection;

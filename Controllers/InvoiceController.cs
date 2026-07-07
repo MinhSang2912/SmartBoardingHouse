@@ -9,17 +9,19 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
-using SmartBoardingHouse.Common;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SmartBoardingHouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class InvoicesController : ControllerBase
     {
         private readonly IMongoCollection<Invoice> _collection;
         private readonly IMongoCollection<Room> _roomCollection;
         private readonly IMongoCollection<User> _userCollection;
+        private readonly IMongoCollection<Contract> _contractCollection;
         private readonly IValidator<InvoiceRequest> _validator;
         private readonly IMapper _mapper;
         private readonly ActivityLogService _activityLogService;
@@ -34,6 +36,7 @@ namespace SmartBoardingHouse.Controllers
             _collection = db.GetCollection<Invoice>("Invoices");
             _userCollection = db.GetCollection<User>("Users");
             _roomCollection = db.GetCollection<Room>("Rooms");
+            _contractCollection = db.GetCollection<Contract>("Contracts");
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
@@ -72,22 +75,54 @@ namespace SmartBoardingHouse.Controllers
 
             var roomExists = await _roomCollection
                 .Find(x => x.RoomNumber == request.RoomNumber)
-                .AnyAsync();
-            if (!roomExists)
+                .FirstOrDefaultAsync();
+            if (roomExists is null)
                 errors.Add(CommonMessage.NotFound("Phòng"));
-            
+
             var userExists = await _userCollection
                 .Find(x => x.Name == request.TenantName)
-                .AnyAsync();
-            
-            if (!userExists)
+                .FirstOrDefaultAsync();
+            if (userExists is null)
                 errors.Add(CommonMessage.NotFound("Người thuê"));
+
+            var contractExists = await _contractCollection
+                .Find(x => x.ContractNumber == request.ContractNumber)
+                .FirstOrDefaultAsync();    
+            if (contractExists is null)
+                errors.Add(CommonMessage.NotFound("Hợp đồng"));
 
             if (errors.Any())
                 return BadRequest(errors);
 
+            if (userExists is null || contractExists is null || roomExists is null)
+                return BadRequest(CommonMessage.NotFound("Các dữ liệu liên quan"));
+
+            if (roomExists.Price != request.RoomPrice)
+                return BadRequest(CommonMessage.RoomPriceMismatch());
+
             var invoice = _mapper.Map<Invoice>(request);
             invoice.CreatedAt = DateTime.UtcNow;
+            invoice.ContractId = contractExists.Id;
+            invoice.TenantId = userExists.Id;
+            invoice.RoomId = roomExists.Id;
+
+            var amont = invoice.RoomPrice + (decimal)invoice.ElectricUsage * invoice.ElectricPrice + (decimal)invoice.WaterUsage * invoice.WaterPrice + invoice.ServiceFee;
+            if(request.Items != null && request.Items.Length > 0)
+            {
+                foreach (var item in request.Items)
+                {
+                    var total = item.Quantity * item.UnitPrice;
+                    invoice.Items.Add(new InvoiceItem
+                    {
+                        Name = item.Name,
+                        UnitPrice = item.UnitPrice,
+                        Quantity = item.Quantity,
+                        Total = total
+                    });
+                    amont += total;
+                }
+            }
+            invoice.Amount = amont; 
 
             await _collection.InsertOneAsync(invoice);
 
@@ -150,7 +185,7 @@ namespace SmartBoardingHouse.Controllers
                 type: ActivityType.Payment,
                 userName: invoice.TenantName,
                 roomNumber: invoice.RoomNumber,
-                description: $"Đã thanh toán {invoice.Amount / 1_000_000:0.#}M",
+                description: $"Đã thanh toán {invoice.Amount / 1_000_000:0.#} triệu đồng",
                 amount: invoice.Amount);
 
             invoice.Status = InvoiceStatus.Paid;
@@ -180,6 +215,8 @@ namespace SmartBoardingHouse.Controllers
         private InvoiceResponse MapToResponse(Invoice invoice)
         {
             var response = _mapper.Map<InvoiceResponse>(invoice);
+            response.ElectricTotal = (decimal)response.ElectricUsage * response.ElectricPrice;
+            response.WaterTotal = (decimal)response.WaterUsage * response.WaterPrice;
 
             var effectiveStatus = invoice.Status == InvoiceStatus.Unpaid && invoice.DueDate < DateTime.Now
                 ? InvoiceStatus.Overdue

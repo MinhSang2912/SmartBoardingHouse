@@ -10,11 +10,10 @@ namespace SmartBoardingHouse.Mappings
         public InvoiceMappingProfile()
         {
             CreateMap<InvoiceRequest, Invoice>()
-                .ForMember(dest => dest.Amount, opt => opt.MapFrom(src =>
-                    src.RoomPrice +
-                    (decimal)src.ElectricUsage * src.ElectricPrice +
-                    (decimal)src.WaterUsage * src.WaterPrice +
-                    src.ServiceFee));
+                .ForMember(dest => dest.ContractId, opt => opt.Ignore())
+                .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+                .ForMember(dest => dest.Items, opt => opt.Ignore())
+                .ForMember(dest => dest.RoomId, opt => opt.Ignore());
 
             CreateMap<Invoice, InvoiceResponse>()
                 .ForMember(dest => dest.BillingPeriod, opt => opt.Ignore())
