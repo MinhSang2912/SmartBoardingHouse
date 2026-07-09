@@ -86,80 +86,80 @@ namespace SmartBoardingHouse.Controllers
         }
 
         // POST: api/MeterReadings
-        //[HttpPost]
-        //[Consumes("multipart/form-data")]
-        //public async Task<ActionResult<MeterReadingResponse>> Create([FromForm] MeterReadingRequest request)
-        //{
-        //    var errors = await ValidateRequest(request);
+       [HttpPost]
+       [Consumes("multipart/form-data")]
+        public async Task<ActionResult<MeterReadingResponse>> Create([FromForm] MeterReadingRequest request)
+        {
+            var errors = await ValidateRequest(request);
 
-        //    // Kiểm tra phòng tồn tại
-        //    var room = await _roomCollection
-        //        .Find(x => x.RoomNumber == request.RoomNumber)
-        //        .FirstOrDefaultAsync();
-        //    if (room == null)
-        //        errors.Add(CommonMessage.NotFound("Phòng"));
-        //    else if (room.Status != RoomStatus.Occupied)
-        //        errors.Add(CommonMessage.MeterReadingRoomNotOccupied());
-            
-        //    var now = DateTime.Now;
+            // Kiểm tra phòng tồn tại
+            var room = await _roomCollection
+                .Find(x => x.RoomNumber == request.RoomNumber)
+                .FirstOrDefaultAsync();
+            if (room == null)
+                errors.Add(CommonMessage.NotFound("Phòng"));
+            else if (room.Status != RoomStatus.Occupied)
+                errors.Add(CommonMessage.MeterReadingRoomNotOccupied());
 
-        //    // Kiểm tra đã có chỉ số cùng loại trong tháng này chưa
-        //    var duplicate = await _collection
-        //        .Find(x => x.RoomNumber == request.RoomNumber
-        //                 && x.Type == request.Type
-        //                 && x.Month == now.Month
-        //                 && x.Year == now.Year)
-        //        .AnyAsync();
-        //    if (duplicate)
-        //        errors.Add(CommonMessage.MeterReadingAlreadyExists());
+            var now = DateTime.Now;
 
-        //    // Lấy chỉ số tháng trước cùng loại
-        //    var prevReading = await GetPreviousReading(request.RoomNumber, request.Type, now.Month, now.Year);
-        //    if (prevReading is not null && request.CurrentIndex < prevReading.CurrentIndex)
-        //        errors.Add(CommonMessage.MeterReadingThisMonthMuchHighterLastMonth());
+            // Kiểm tra đã có chỉ số cùng loại trong tháng này chưa
+            var duplicate = await _collection
+                .Find(x => x.RoomNumber == request.RoomNumber
+                         && x.Type == request.Type
+                         && x.Month == now.Month
+                         && x.Year == now.Year)
+                .AnyAsync();
+            if (duplicate)
+                errors.Add(CommonMessage.MeterReadingAlreadyExists());
 
-        //    // Lưu ảnh
-        //    string? photoUrl = null;
-        //    if (request.Photo is not null)
-        //    {
-        //        try
-        //        {
-        //            photoUrl = await _photoService.SaveMeterPhotoAsync(request.Photo, "default");
-        //        }
-        //        catch (ArgumentException ex)
-        //        {
-        //            errors.Add(ex.Message);
-        //        }
-        //    }
+            // Lấy chỉ số tháng trước cùng loại
+            var prevReading = await GetPreviousReading(request.RoomNumber, request.Type, now.Month, now.Year);
+            if (prevReading is not null && request.CurrentIndex < prevReading.CurrentIndex)
+                errors.Add(CommonMessage.MeterReadingThisMonthMuchHighterLastMonth());
 
-        //    if (errors.Any())
-        //        return BadRequest(errors);
+            // Lưu ảnh
+            string? photoUrl = null;
+            if (request.Photo is not null)
+            {
+                try
+                {
+                    photoUrl = await _photoService.SaveMeterPhotoAsync(request.Photo, "default");
+                }
+                catch (ArgumentException ex)
+                {
+                    errors.Add(ex.Message);
+                }
+            }
 
-        //    var contract = await _contractCollection
-        //        .Find(c => c.RoomNumber == request.RoomNumber && c.Status == ContractStatus.Active)
-        //        .FirstOrDefaultAsync();
-        //    if (contract is null)
-        //        return BadRequest(CommonMessage.MaintenanceRoomNotOccupied());
+            if (errors.Any())
+                return BadRequest(errors);
 
-        //    var reading = _mapper.Map<MeterReading>(request);
-        //    reading.Month = now.Month;
-        //    reading.Year = now.Year;
-        //    reading.RoomId=contract.RoomId;
-        //    reading.TenantId=contract.TenantId;
-        //    reading.PreviousIndex = prevReading?.CurrentIndex ?? 0;
-        //    reading.CurrentIndex = request.CurrentIndex;
-        //    reading.Usage = request.CurrentIndex - reading.PreviousIndex;
-        //    reading.UnitPrice = request.Type == MeterType.Electric ? ElectricUnitPrice : WaterUnitPrice;
-        //    reading.TotalCost = (decimal)reading.Usage * reading.UnitPrice;
-        //    reading.PhotoUrl = photoUrl;
-        //    reading.CreatedAt = DateTime.UtcNow;
+            var contract = await _contractCollection
+                .Find(c => c.RoomNumber == request.RoomNumber && c.Status == ContractStatus.Active)
+                .FirstOrDefaultAsync();
+            if (contract is null)
+                return BadRequest(CommonMessage.MaintenanceRoomNotOccupied());
 
-        //    await _collection.InsertOneAsync(reading);
+            var reading = _mapper.Map<MeterReading>(request);
+            reading.Month = now.Month;
+            reading.Year = now.Year;
+            reading.RoomId = contract.RoomId;
+            reading.TenantId = contract.TenantId;
+            reading.PreviousIndex = prevReading?.CurrentIndex ?? 0;
+            reading.CurrentIndex = request.CurrentIndex;
+            reading.Usage = request.CurrentIndex - reading.PreviousIndex;
+            reading.UnitPrice = request.Type == MeterType.Electric ? ElectricUnitPrice : WaterUnitPrice;
+            reading.TotalCost = (decimal)reading.Usage * reading.UnitPrice;
+            reading.PhotoUrl = photoUrl;
+            reading.CreatedAt = DateTime.UtcNow;
 
-        //    var contracts = await _contractCollection.Find(_ => true).ToListAsync();
-        //    return CreatedAtAction(nameof(GetById), new { id = reading.Id },
-        //        MapToResponse(reading, contracts));
-        //}
+            await _collection.InsertOneAsync(reading);
+
+            var contracts = await _contractCollection.Find(_ => true).ToListAsync();
+            return CreatedAtAction(nameof(GetById), new { id = reading.Id },
+                MapToResponse(reading, contracts));
+        }
 
         // PUT: api/MeterReadings/{id}
         //[HttpPut("{id}")]

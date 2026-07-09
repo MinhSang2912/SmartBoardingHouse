@@ -1,32 +1,29 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System;
 
 namespace SmartBoardingHouse.Models.Entity
 {
     public class Message : BaseModel
     {
-        [BsonElement("sender")]
+        [BsonElement("conversationId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string SenderId { get; set; } = string.Empty;
+        public string ConversationId { get; set; } = string.Empty;
 
-        [BsonElement("receiver")]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string ReceiverId { get; set; } = string.Empty;
-
-        [BsonElement("senderModel")]
-        public string SenderModel { get; set; } = "Tenant";
+        [BsonElement("senderRole")]
+        public string SenderRole { get; set; } = "Tenant";  // "Tenant" hoặc "Admin"
 
         [BsonElement("content")]
         public string Content { get; set; } = string.Empty;
 
         [BsonElement("type")]
-        public string Type { get; set; } = "text";
+        public string Type { get; set; } = "text";  // "text" hoặc "image"
 
         [BsonElement("imageUrl")]
         public string? ImageUrl { get; set; }
 
         [BsonElement("isRead")]
-        public bool IsRead { get; set; }
+        public bool IsRead { get; set; } = false;
 
         [BsonElement("readAt")]
         public DateTime? ReadAt { get; set; }
