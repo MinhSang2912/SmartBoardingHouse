@@ -76,6 +76,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+// ====================== CORS ======================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReact",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 // ====================== SWAGGER ======================
 builder.Services.AddSwaggerGen(c =>
 {
@@ -143,6 +155,8 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseHttpsRedirection();
+app.UseCors("AllowReact");
+
 
 // Authentication phải trước Authorization
 app.UseAuthentication();
