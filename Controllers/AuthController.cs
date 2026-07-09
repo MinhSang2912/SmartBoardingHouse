@@ -9,8 +9,6 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
 using SmartBoardingHouse.Common;
-using SmartBoardingHouse.Models.Settings;
-using Microsoft.Extensions.Options;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -21,20 +19,17 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<User> _userCollection;
         private readonly IValidator<LoginRequest> _loginValidator;
         private readonly IValidator<RegisterRequest> _registerValidator;
-        private readonly IOptions<AdminSettings> _adminSettings;
         private readonly JwtService _jwtService;
 
         public AuthController(
             MongoDbService mongoService,
             IValidator<LoginRequest> loginValidator,
             IValidator<RegisterRequest> registerValidator,
-            IOptions<AdminSettings> adminSettings,
             JwtService jwtService)
         {
             _userCollection = mongoService.GetDatabase().GetCollection<User>("Users");
             _loginValidator = loginValidator;
             _registerValidator = registerValidator;
-            _adminSettings = adminSettings;
             _jwtService = jwtService;
         }
 
@@ -46,22 +41,22 @@ namespace SmartBoardingHouse.Controllers
             if (!validationResult.IsValid)
                 return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
-            // Kiểm tra thông tin Admin
-            if (request.Email != _adminSettings.Value.Email || request.Password != _adminSettings.Value.Password)
-            {
-                return Unauthorized(CommonMessage.LoginEmailOrPasswordIsWrong());
-            }
+            // Tìm user theo email
+            var user = await _userCollection
+                .Find(x => x.Email == request.Email)
+                .FirstOrDefaultAsync();
 
-            // Tạo hoặc lấy thông tin Admin
-            var adminUser = await _userCollection.Find(u => u.Email == _adminSettings.Value.Email).FirstOrDefaultAsync();
+            if (user is null)
+                return BadRequest(CommonMessage.LoginEmailOrPasswordIsWrong());
 
-            // Cập nhật Refresh Token
-            adminUser.RefreshToken = _jwtService.GenerateRefreshToken();
-            adminUser.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+            if (!PasswordHelper.Verify(request.Password, user.Password))
+                return BadRequest(CommonMessage.LoginEmailOrPasswordIsWrong());
 
-            await _userCollection.ReplaceOneAsync(x => x.Id == adminUser.Id, adminUser);
+            user.RefreshToken = _jwtService.GenerateRefreshToken();
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
 
-            return Ok(MapToAuthResponse(adminUser));
+            return Ok(MapToAuthResponse(user));
         }
 
         // POST: api/Auth/register

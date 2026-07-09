@@ -2,8 +2,6 @@
 using SmartBoardingHouse.Models.Entity;
 using static SmartBoardingHouse.Common.Enums;
 using SmartBoardingHouse.Common;
-using Microsoft.Extensions.Options;
-using SmartBoardingHouse.Models.Settings;
 
 namespace SmartBoardingHouse.Data
 {
@@ -11,12 +9,10 @@ namespace SmartBoardingHouse.Data
     {
         private readonly IMongoDatabase _database;
         private readonly ILogger<DataSeeder>? _logger;
-        private readonly IOptions<AdminSettings> _adminSettings;
 
-        public DataSeeder(IMongoDatabase database, IOptions<AdminSettings> adminSettings, ILogger<DataSeeder>? logger = null)
+        public DataSeeder(IMongoDatabase database, ILogger<DataSeeder>? logger = null)
         {
             _database = database;
-            _adminSettings = adminSettings;
             _logger = logger;
         }
 
@@ -55,8 +51,8 @@ namespace SmartBoardingHouse.Data
                     new User
                     {
                         Name = "Chu Nha",
-                        Email = _adminSettings.Value.Email,
-                        Password = PasswordHelper.Hash(_adminSettings.Value.Password),
+                        Email = "chunha@example.com",
+                        Password = PasswordHelper.Hash("Abc@1234"),
                         PhoneNumber = "0900111222",
                         IDCard = "012345678910",          
                         AvatarUrl = "",
