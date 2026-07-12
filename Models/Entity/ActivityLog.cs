@@ -3,8 +3,9 @@ using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
-    // Log nội bộ riêng cho Admin — không có entity tương ứng bên Client,
-    // không cần đồng bộ field name/type với Mongoose.
+    /// <summary>
+    /// Bảng ActivityLog lưu trữ thông tin về các hoạt động của người dùng trong hệ thống.
+    /// </summary>
     public class ActivityLog : BaseModel
     {
         [BsonElement("type")]

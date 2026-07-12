@@ -6,6 +6,11 @@ using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
+    /// <summary>
+    /// Bảng Contract lưu trữ thông tin về các hợp đồng thuê phòng. 
+    /// Mỗi hợp đồng liên kết một phòng với một người thuê và chứa thông tin về thời gian thuê, 
+    /// giá thuê, tiền đặt cọc, điều khoản hợp đồng và trạng thái hợp đồng.
+    /// </summary>
     public class Contract : BaseModel
     {
         [BsonElement("contractNumber")]
@@ -52,34 +57,5 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("status")]
         public ContractStatus Status { get; set; }
-    }
-
-    public class ContractValidation : AbstractValidator<Contract>
-    {
-        public ContractValidation()
-        {
-            RuleFor(x => x.ContractNumber)
-                .NotEmpty().WithMessage(CommonMessage.ContractNumberIsRequired());
-
-            RuleFor(x => x.RoomNumber)
-                .NotEmpty().WithMessage(CommonMessage.ContractRoomNumberIsRequired());
-
-            RuleFor(x => x.TenantName)
-                .NotEmpty().WithMessage(CommonMessage.ContractTenantNameIsRequired());
-
-            RuleFor(x => x.StartDate)
-                .NotEmpty().WithMessage(CommonMessage.ContractStartDateIsRequired())
-                .LessThan(x => x.EndDate).WithMessage(CommonMessage.ContractStartDateMustBeBeforeEndDate());
-
-            RuleFor(x => x.EndDate)
-                .NotEmpty().WithMessage(CommonMessage.ContractEndDateIsRequired())
-                .GreaterThan(x => x.StartDate).WithMessage(CommonMessage.ContractEndDateMustBeAfterStartDate());
-
-            RuleFor(x => x.PaymentDate)
-                .InclusiveBetween(1, 31).WithMessage(CommonMessage.ContractPaymentDateIsInvalid());
-
-            RuleFor(x => x.Status)
-                .IsInEnum().WithMessage(CommonMessage.ContractStatusIsInvalid());
-        }
     }
 }

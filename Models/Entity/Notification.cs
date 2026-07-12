@@ -3,6 +3,9 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace SmartBoardingHouse.Models.Entity
 {
+    /// <summary>
+    /// Bảng Notification lưu trữ thông tin về các thông báo gửi đến người dùng trong hệ thống.
+    /// </summary>
     public class Notification : BaseModel
     {
         [BsonElement("user")]

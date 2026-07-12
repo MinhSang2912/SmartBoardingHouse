@@ -65,108 +65,108 @@ namespace SmartBoardingHouse.Controllers
         }
 
         // POST: api/Auth/register
-        [HttpPost("register")]
-        public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
-        {
-            var validationResult = await _registerValidator.ValidateAsync(request);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
+        //[HttpPost("register")]
+        //public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
+        //{
+        //    var validationResult = await _registerValidator.ValidateAsync(request);
+        //    if (!validationResult.IsValid)
+        //        return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage));
 
-            // Kiểm tra email đã tồn tại chưa
-            var emailExists = await _userCollection
-                .Find(x => x.Email == request.Email)
-                .AnyAsync();
-            if (emailExists)
-                return BadRequest(CommonMessage.LoginEmailExists());
+        //    // Kiểm tra email đã tồn tại chưa
+        //    var emailExists = await _userCollection
+        //        .Find(x => x.Email == request.Email)
+        //        .AnyAsync();
+        //    if (emailExists)
+        //        return BadRequest(CommonMessage.LoginEmailExists());
 
-            var user = new User
-            {
-                Name = request.Name,
-                Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
-                Password = PasswordHelper.Hash(request.Password),
-                RoomNumber = string.Empty,
-                CreatedAt = DateTime.UtcNow,
-                RefreshToken = _jwtService.GenerateRefreshToken(),
-                RefreshTokenExpiry = DateTime.UtcNow.AddDays(7)
-            };
+        //    var user = new User
+        //    {
+        //        Name = request.Name,
+        //        Email = request.Email,
+        //        PhoneNumber = request.PhoneNumber,
+        //        Password = PasswordHelper.Hash(request.Password),
+        //        RoomNumber = string.Empty,
+        //        CreatedAt = DateTime.UtcNow,
+        //        RefreshToken = _jwtService.GenerateRefreshToken(),
+        //        RefreshTokenExpiry = DateTime.UtcNow.AddDays(7)
+        //    };
 
-            await _userCollection.InsertOneAsync(user);
+        //    await _userCollection.InsertOneAsync(user);
 
-            return Ok(MapToAuthResponse(user));
-        }
+        //    return Ok(MapToAuthResponse(user));
+        //}
 
         // POST: api/Auth/refresh-token
-        [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken(RefreshTokenRequest request)
-        {
-            if (string.IsNullOrEmpty(request.RefreshToken))
-                return BadRequest("Refresh token is required.");
+        //[HttpPost("refresh-token")]
+        //public async Task<IActionResult> RefreshToken(RefreshTokenRequest request)
+        //{
+        //    if (string.IsNullOrEmpty(request.RefreshToken))
+        //        return BadRequest("Refresh token is required.");
 
-            var user = await _userCollection
-                .Find(x => x.RefreshToken == request.RefreshToken)
-                .FirstOrDefaultAsync();
+        //    var user = await _userCollection
+        //        .Find(x => x.RefreshToken == request.RefreshToken)
+        //        .FirstOrDefaultAsync();
 
-            if (user is null || user.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
-                return Unauthorized("Refresh token is invalid or expired.");
+        //    if (user is null || user.RefreshTokenExpiry == null || user.RefreshTokenExpiry < DateTime.UtcNow)
+        //        return Unauthorized("Refresh token is invalid or expired.");
 
-            user.RefreshToken = _jwtService.GenerateRefreshToken();
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
-            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+        //    user.RefreshToken = _jwtService.GenerateRefreshToken();
+        //    user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+        //    await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
 
-            var response = new
-            {
-                Token = _jwtService.GenerateToken(user),
-                RefreshToken = user.RefreshToken
-            };
+        //    var response = new
+        //    {
+        //        Token = _jwtService.GenerateToken(user),
+        //        RefreshToken = user.RefreshToken
+        //    };
 
-            return Ok(response);
-        }
+        //    return Ok(response);
+        //}
 
         // POST: api/Auth/forgot-password
-        [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
-        {
-            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.NewPassword))
-                return BadRequest("Email and new password are required.");
+        //[HttpPost("forgot-password")]
+        //public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+        //{
+        //    if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.NewPassword))
+        //        return BadRequest("Email and new password are required.");
 
-            var user = await _userCollection.Find(x => x.Email == request.Email).FirstOrDefaultAsync();
-            if (user is null)
-                return NotFound(CommonMessage.NotFound("Người dùng"));
+        //    var user = await _userCollection.Find(x => x.Email == request.Email).FirstOrDefaultAsync();
+        //    if (user is null)
+        //        return NotFound(CommonMessage.NotFound("Người dùng"));
 
-            user.Password = PasswordHelper.Hash(request.NewPassword);
-            user.UpdatedAt = DateTime.UtcNow;
-            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+        //    user.Password = PasswordHelper.Hash(request.NewPassword);
+        //    user.UpdatedAt = DateTime.UtcNow;
+        //    await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
 
-            return Ok(CommonMessage.Updated("Mật khẩu"));
-        }
+        //    return Ok(CommonMessage.Updated("Mật khẩu"));
+        //}
 
         // PUT: api/Auth/change-password
-        [HttpPut("change-password")]
-        public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
-        {
-            if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword))
-                return BadRequest("Current password and new password are required.");
+        //[HttpPut("change-password")]
+        //public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+        //{
+        //    if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword))
+        //        return BadRequest("Current password and new password are required.");
 
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim))
-                return Unauthorized();
+        //    var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        //    if (string.IsNullOrEmpty(userIdClaim))
+        //        return Unauthorized();
 
-            var userId = userIdClaim;
+        //    var userId = userIdClaim;
 
-            var user = await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
-            if (user is null)
-                return NotFound(CommonMessage.NotFound("Người dùng"));
+        //    var user = await _userCollection.Find(x => x.Id == userId).FirstOrDefaultAsync();
+        //    if (user is null)
+        //        return NotFound(CommonMessage.NotFound("Người dùng"));
 
-            if (!PasswordHelper.Verify(request.CurrentPassword, user.Password))
-                return BadRequest("Mật khẩu hiện tại không đúng.");
+        //    if (!PasswordHelper.Verify(request.CurrentPassword, user.Password))
+        //        return BadRequest("Mật khẩu hiện tại không đúng.");
 
-            user.Password = PasswordHelper.Hash(request.NewPassword);
-            user.UpdatedAt = DateTime.UtcNow;
-            await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
+        //    user.Password = PasswordHelper.Hash(request.NewPassword);
+        //    user.UpdatedAt = DateTime.UtcNow;
+        //    await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
 
-            return Ok(CommonMessage.Updated("Mật khẩu"));
-        }
+        //    return Ok(CommonMessage.Updated("Mật khẩu"));
+        //}
 
         // POST: api/Auth/logout
         [HttpPost("logout")]

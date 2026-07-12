@@ -4,6 +4,9 @@ using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
+    /// <summary>
+    /// Bảng MeterReading lưu trữ thông tin về các chỉ số điện, nước của từng phòng trong nhà trọ.
+    /// </summary>
     public class MeterReading : BaseModel
     {
         [BsonElement("room")]

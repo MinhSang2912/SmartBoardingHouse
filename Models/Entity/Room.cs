@@ -6,6 +6,10 @@ using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
+    /// <summary>
+    /// Bảng Room lưu trữ thông tin về các phòng trong nhà trọ. 
+    /// Mỗi phòng có thể thuộc về một tầng và có thể được thuê bởi một người thuê.
+    /// </summary>
     public class Room : BaseModel
     {
         [BsonElement("roomNumber")]

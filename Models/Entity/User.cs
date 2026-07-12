@@ -4,9 +4,10 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace SmartBoardingHouse.Models.Entity
 {
-    // Đại diện cho cùng collection "Tenant" mà Client (Mongoose model Tenant.js) dùng.
-    // Tên class vẫn giữ "User" theo convention cũ của Admin (Request/Response đã dùng tên này),
-    // nhưng field đã khớp 100% với Tenant.js.
+    /// <summary>
+    /// Bảng User lưu trữ thông tin về người dùng trong hệ thống, 
+    /// bao gồm tên, email, số điện thoại, mật khẩu và các thông tin liên quan khác.
+    /// </summary>
     public class User : BaseModel
     {
         [BsonElement("fullName")]

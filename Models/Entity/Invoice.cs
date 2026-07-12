@@ -6,6 +6,9 @@ using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
+    /// <summary>
+    /// Bảng Invoice lưu trữ thông tin về các hóa đơn thanh toán của người thuê phòng.
+    /// </summary>
     public class Invoice : BaseModel
     {
         [BsonElement("invoiceNumber")]

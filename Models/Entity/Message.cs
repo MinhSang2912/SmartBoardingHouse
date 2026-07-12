@@ -1,9 +1,11 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using System;
 
 namespace SmartBoardingHouse.Models.Entity
 {
+    /// <summary>
+    /// Bảng Message lưu trữ thông tin về các tin nhắn trong cuộc trò chuyện giữa người thuê phòng và quản trị viên.
+    /// </summary>
     public class Message : BaseModel
     {
         [BsonElement("conversationId")]

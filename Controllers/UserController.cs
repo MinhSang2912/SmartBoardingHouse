@@ -2,11 +2,13 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
+using SmartBoardingHouse.Models.Settings;
 using Message = SmartBoardingHouse.Common.Message;
 
 namespace SmartBoardingHouse.Controllers
@@ -18,19 +20,21 @@ namespace SmartBoardingHouse.Controllers
     {
         private readonly IMongoCollection<User> _collection;
         private readonly IValidator<UserRequest> _validator;
+        private readonly IOptions<AdminSettings> _adminSettings;
         private readonly IMapper _mapper;
 
-        public UsersController(MongoDbService mongoService, IValidator<UserRequest> validator, IMapper mapper)
+        public UsersController(MongoDbService mongoService, IValidator<UserRequest> validator, IOptions<AdminSettings> adminSettings, IMapper mapper)
         {
             _collection = mongoService.GetDatabase().GetCollection<User>("Users");
             _validator = validator;
+            _adminSettings = adminSettings;
             _mapper = mapper;
         }
 
         [HttpGet]
         public async Task<ActionResult<List<User>>> GetAll()
         {
-            var users = await _collection.Find(_ => true).ToListAsync();
+            var users = await _collection.Find(x => x.Email != _adminSettings.Value.Email).ToListAsync();
             return Ok(users);
         }
 
