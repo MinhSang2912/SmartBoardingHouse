@@ -3,16 +3,12 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using MongoDB.Driver;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Mappings;
 using SmartBoardingHouse.Models.Entity;
-using SmartBoardingHouse.Models.Mapper;
 using SmartBoardingHouse.Models.Request;
-using SmartBoardingHouse.Models.Settings;
 using SmartBoardingHouse.Services;
 using System.Text;
 
@@ -24,15 +20,6 @@ builder.Services.AddControllers();
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();
-// Đăng ký IMongoDatabase để các Controller có thể inject
-builder.Services.AddSingleton<IMongoDatabase>(sp =>
-{
-    var mongoService = sp.GetRequiredService<MongoDbService>();
-    return mongoService.GetDatabase();
-});
-// ====================== ADMIN SETTINGS ======================
-builder.Services.Configure<AdminSettings>(
-    builder.Configuration.GetSection("AdminAccount"));
 
 // ====================== VALIDATORS ======================
 builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidation>();
@@ -44,8 +31,6 @@ builder.Services.AddScoped<IValidator<MaintenanceRequestRequest>, MaintenanceReq
 builder.Services.AddScoped<IValidator<MeterReadingRequest>, MeterReadingRequestValidation>();
 builder.Services.AddScoped<IValidator<RoomRequest>, RoomRequestValidation>();
 builder.Services.AddScoped<IValidator<UserRequest>, UserRequestValidation>();
-builder.Services.AddScoped<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
-
 
 // ====================== AUTOMAPPER ======================
 var mapperConfig = new MapperConfiguration(cfg =>
@@ -57,7 +42,6 @@ var mapperConfig = new MapperConfiguration(cfg =>
     cfg.AddProfile<InvoiceMappingProfile>();
     cfg.AddProfile<MeterReadingMappingProfile>();
     cfg.AddProfile<MaintenanceMappingProfile>();
-    cfg.AddProfile<MessageMappingProfile>();
 }, NullLoggerFactory.Instance);
 builder.Services.AddSingleton(mapperConfig.CreateMapper());
 
@@ -145,8 +129,7 @@ var app = builder.Build();
 
 // ====================== SEED DATA ======================
 var mongoService = app.Services.GetRequiredService<MongoDbService>();
-var adminSettings = app.Services.GetRequiredService<IOptions<AdminSettings>>();
-var dataSeeder = new DataSeeder(mongoService.GetDatabase(), adminSettings);
+var dataSeeder = new DataSeeder(mongoService.GetDatabase());
 await dataSeeder.SeedAsync();
 
 // ====================== MIDDLEWARE ======================
