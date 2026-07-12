@@ -130,5 +130,19 @@
         public static string RegisterConfirmPasswordIsRequired() => "Xác nhận mật khẩu không được để trống.";
         public static string RegisterPasswordNotMatch() => "Mật khẩu xác nhận không khớp.";
         #endregion
+
+        #region Message
+        public static string MessageSenderIdRequired() => "Người gửi không được để trống.";
+        public static string MessageReceiverIdRequired() => "Người nhận không được để trống.";
+        public static string MessageContentRequired() => "Nội dung tin nhắn không được để trống.";
+        public static string MessageContentTooLong() => "Nội dung tin nhắn không được vượt quá 2000 ký tự.";
+        public static string MessageTypeInvalid() => "Loại tin nhắn không hợp lệ.";
+        public static string MessageSenderNotFound() => "Không tìm thấy người gửi.";
+        public static string MessageReceiverNotFound() => "Không tìm thấy người nhận.";
+        public static string MessageNotFound() => "Không tìm thấy tin nhắn.";
+        public static string MessageConversationNotFound() => "Không tìm thấy cuộc trò chuyện.";
+        public static string MessageMarkReadFailed() => "Đánh dấu tin nhắn đã đọc thất bại.";
+        public static string MessageUnauthorized() => "Bạn không có quyền thực hiện thao tác này.";
+        #endregion
     }
 }

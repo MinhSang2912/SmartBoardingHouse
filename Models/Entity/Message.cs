@@ -1,13 +1,18 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
     /// <summary>
-    /// Bảng Message lưu trữ thông tin về các tin nhắn trong cuộc trò chuyện giữa người thuê phòng và quản trị viên.
+    /// Bảng Message lưu trữ thông tin về các tin nhắn trong cuộc trò chuyện 
+    /// giữa người thuê phòng và quản trị viên.
     /// </summary>
     public class Message : BaseModel
     {
+        [BsonElement("conversationId")]
+        public string ConversationId { get; set; } = string.Empty;
+
         [BsonElement("sender")]
         [BsonRepresentation(BsonType.ObjectId)]
         public string SenderId { get; set; } = string.Empty;
@@ -16,14 +21,11 @@ namespace SmartBoardingHouse.Models.Entity
         [BsonRepresentation(BsonType.ObjectId)]
         public string ReceiverId { get; set; } = string.Empty;
 
-        [BsonElement("senderModel")]
-        public string SenderModel { get; set; } = "Tenant";
-
         [BsonElement("content")]
         public string Content { get; set; } = string.Empty;
 
         [BsonElement("type")]
-        public string Type { get; set; } = "text";
+        public MessageType Type { get; set; } = MessageType.Text;
 
         [BsonElement("imageUrl")]
         public string? ImageUrl { get; set; }

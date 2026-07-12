@@ -95,7 +95,7 @@ namespace SmartBoardingHouse.Services
         /// <summary>
         /// Save maintenance photo to Cloudinary
         /// </summary>
-        public async Task<string> SaveMaintenancePhotoAsync(IFormFile photo, string userId)
+        public async Task<string> SaveMaintenancePhotoAsync(IFormFile photo, string userId, string folder)
         {
             if (photo == null || photo.Length == 0)
                 throw new ArgumentException("Photo cannot be empty");
@@ -110,13 +110,13 @@ namespace SmartBoardingHouse.Services
                 throw new ArgumentException("File size exceeds 10MB limit");
 
             using var stream = photo.OpenReadStream();
-            var publicId = $"maintenance_{userId}_{DateTime.UtcNow.Ticks}";
-            EnsureFolderExists("tenant-app/maintenance");
+            var publicId = $"{folder}_{userId}_{DateTime.UtcNow.Ticks}";
+            EnsureFolderExists($"tenant-app/{folder}");
 
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(photo.FileName, stream),
-                Folder = "tenant-app/maintenance",
+                Folder = $"tenant-app/{folder}",
                 PublicId = publicId,
                 AllowedFormats = allowedFormats
             };

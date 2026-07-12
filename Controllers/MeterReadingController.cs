@@ -184,7 +184,7 @@ namespace SmartBoardingHouse.Controllers
         //    if (request.Photo is not null)
         //    {
         //        _photoService.DeletePhoto(existing.PhotoUrl);
-        //        photoUrl = await _photoService.SavePhotoAsync(request.Photo);
+        //        photoUrl = await _photoService.SaveMaintenancePhotoAsync(request.Photo, "default", "MeterReadings");
         //    }
 
         //    var updated = _mapper.Map<MeterReading>(request);

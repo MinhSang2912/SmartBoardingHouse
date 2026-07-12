@@ -51,6 +51,12 @@
             Water = 1
         }
 
+        public enum MessageType
+        {
+            Text = 0,
+            Image = 1,
+        }
+
         public enum MaintenanceCategory
         {
             Electrical = 0,
