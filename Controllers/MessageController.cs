@@ -29,7 +29,7 @@ namespace SmartBoardingHouse.Controllers
             IValidator<SendMessageRequest> validator,
             PhotoService photoService)
         {
-            _messageCollection = database.GetCollection<Message>("Messages");
+            _messageCollection = database.GetCollection<Message>("messages");
             _mapper = mapper;
             _validator = validator;
             _photoService = photoService;

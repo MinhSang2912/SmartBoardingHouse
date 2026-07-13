@@ -30,9 +30,9 @@ namespace SmartBoardingHouse.Controllers
             IMapper mapper)
         {
             var db = mongoService.GetDatabase();
-            _collection = db.GetCollection<Room>("Rooms");
-            _floorCollection = db.GetCollection<Floor>("Floors");
-            _contractCollection = db.GetCollection<Contract>("Contracts");
+            _collection = db.GetCollection<Room>("rooms");
+            _floorCollection = db.GetCollection<Floor>("floors");
+            _contractCollection = db.GetCollection<Contract>("contracts");
             _validator = validator;
             _mapper = mapper;
         }

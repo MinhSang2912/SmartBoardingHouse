@@ -1,16 +1,17 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
     /// <summary>
-    /// Bảng Notification lưu trữ thông tin về các thông báo gửi đến người dùng trong hệ thống.
+    /// Thông báo gửi cho người thuê phòng (Tenant)
     /// </summary>
     public class Notification : BaseModel
     {
-        [BsonElement("user")]
+        [BsonElement("tenant")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string UserId { get; set; } = string.Empty;
+        public string TenantId { get; set; } = string.Empty;
 
         [BsonElement("title")]
         public string Title { get; set; } = string.Empty;
@@ -19,19 +20,23 @@ namespace SmartBoardingHouse.Models.Entity
         public string Body { get; set; } = string.Empty;
 
         [BsonElement("type")]
-        public string Type { get; set; } = "general";
+        public NotificationType Type { get; set; } = NotificationType.General;
 
         [BsonElement("refId")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string? RefId { get; set; }
+        public string? RefId { get; set; }   // Có thể là InvoiceId, MaintenanceId, MessageId,...
 
         [BsonElement("refModel")]
-        public string? RefModel { get; set; }
+        public string? RefModel { get; set; }  // Ví dụ: "Invoice", "MaintenanceRequest", "Message"
+
+        [BsonElement("meta")]
+        public Dictionary<string, object>? Meta { get; set; }  // Dữ liệu linh hoạt
 
         [BsonElement("isRead")]
-        public bool IsRead { get; set; }
+        public bool IsRead { get; set; } = false;
 
         [BsonElement("readAt")]
         public DateTime? ReadAt { get; set; }
+
     }
 }

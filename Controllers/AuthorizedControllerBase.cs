@@ -12,7 +12,7 @@ namespace SmartBoardingHouse.Controllers
         protected AuthorizedControllerBase(MongoDbService mongoService)
         {
             var db = mongoService.GetDatabase();
-            _userCollection = db.GetCollection<User>("Users");
+            _userCollection = db.GetCollection<User>("users");
         }
 
         protected async Task<User?> GetCurrentUserAsync()

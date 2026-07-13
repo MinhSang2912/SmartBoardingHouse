@@ -21,9 +21,9 @@ namespace SmartBoardingHouse.Controllers
         public DashboardController(MongoDbService mongoService)
         {
             var db = mongoService.GetDatabase();
-            _roomCollection = db.GetCollection<Room>("Rooms");
-            _invoiceCollection = db.GetCollection<Invoice>("Invoices");
-            _activityLogCollection = db.GetCollection<ActivityLog>("ActivityLogs");
+            _roomCollection = db.GetCollection<Room>("rooms");
+            _invoiceCollection = db.GetCollection<Invoice>("invoices");
+            _activityLogCollection = db.GetCollection<ActivityLog>("activityLogs");
         }
 
         // GET: api/Dashboard

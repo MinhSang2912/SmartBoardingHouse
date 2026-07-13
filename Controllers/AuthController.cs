@@ -27,7 +27,7 @@ namespace SmartBoardingHouse.Controllers
             IValidator<RegisterRequest> registerValidator,
             JwtService jwtService)
         {
-            _userCollection = mongoService.GetDatabase().GetCollection<User>("Users");
+            _userCollection = mongoService.GetDatabase().GetCollection<User>("users");
             _loginValidator = loginValidator;
             _registerValidator = registerValidator;
             _jwtService = jwtService;

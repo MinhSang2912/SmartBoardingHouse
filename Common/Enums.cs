@@ -64,5 +64,14 @@
             Furniture = 2,
             Other = 3
         }
+
+        public enum NotificationType
+        {
+            General = 0,
+            Invoice = 1,
+            Debt = 2,
+            Maintenance = 3,
+            Message = 4
+        }
     }
 }

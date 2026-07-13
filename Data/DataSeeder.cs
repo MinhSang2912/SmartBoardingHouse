@@ -24,11 +24,11 @@ namespace SmartBoardingHouse.Data
         {
             try
             {
-                var floorCol = _database.GetCollection<Floor>("Floors");
-                var roomCol = _database.GetCollection<Room>("Rooms");
-                var userCol = _database.GetCollection<User>("Users");
-                var contractCol = _database.GetCollection<Contract>("Contracts");
-                var invoiceCol = _database.GetCollection<Invoice>("Invoices");
+                var floorCol = _database.GetCollection<Floor>("floors");
+                var roomCol = _database.GetCollection<Room>("rooms");
+                var userCol = _database.GetCollection<User>("users");
+                var contractCol = _database.GetCollection<Contract>("contracts");
+                var invoiceCol = _database.GetCollection<Invoice>("invoices");
 
                 // Nếu đã có dữ liệu thì bỏ qua seeding
                 if (await floorCol.CountDocumentsAsync(FilterDefinition<Floor>.Empty) > 0)
@@ -36,7 +36,7 @@ namespace SmartBoardingHouse.Data
                     return;
                 }
 
-                Log("Bắt đầu seeding dữ liệu...");
+                Log("Bat đau seeding du lieu...");
 
                 // 1. Seed Floors
                 var floors = new List<Floor>
@@ -47,7 +47,7 @@ namespace SmartBoardingHouse.Data
 
                 await floorCol.InsertManyAsync(floors);
                 var floorList = await floorCol.Find(_ => true).ToListAsync();
-                Log($"Đã tạo {floorList.Count} tầng.");
+                Log($"Da tao {floorList.Count} tang.");
 
                 // 2. Seed Users (khớp với model User mới)
                 var users = new List<User>
@@ -92,7 +92,7 @@ namespace SmartBoardingHouse.Data
 
                 await userCol.InsertManyAsync(users);
                 var userList = await userCol.Find(_ => true).ToListAsync();
-                Log($"Đã tạo {userList.Count} người dùng.");
+                Log($"Da tao {userList.Count} nguoi dung.");
 
                 // 3. Seed Rooms
                 var rooms = new List<Room>
@@ -128,40 +128,8 @@ namespace SmartBoardingHouse.Data
 
                 await roomCol.InsertManyAsync(rooms);
                 var roomList = await roomCol.Find(_ => true).ToListAsync();
-                Log($"Đã tạo {roomList.Count} phòng.");
-
-                // 4. Seed Contracts (ví dụ cho tenant đầu tiên)
-                var tenant = userList.FirstOrDefault(u => u.Email.Contains("nguyenvana")); // Chọn tenant
-                var room = roomList.FirstOrDefault();
-
-                if (tenant != null && room != null)
-                {
-                    var contract = new Contract
-                    {
-                        ContractNumber = $"HD-{DateTime.UtcNow:yyyyMMdd}-001",
-                        TenantId = tenant.Id,
-                        TenantName = tenant.Name,
-                        RoomId = room.Id,
-                        RoomNumber = room.RoomNumber,
-                        StartDate = DateTime.UtcNow,
-                        EndDate = DateTime.UtcNow.AddMonths(6),
-                        Status = ContractStatus.Active
-                    };
-
-                    await contractCol.InsertOneAsync(contract);
-
-                    // Cập nhật phòng và tenant
-                    room.Status = RoomStatus.Occupied;
-                    await roomCol.ReplaceOneAsync(r => r.Id == room.Id, room);
-
-                    tenant.RoomId = room.Id;
-                    tenant.RoomNumber = room.RoomNumber;
-                    await userCol.ReplaceOneAsync(u => u.Id == tenant.Id, tenant);
-
-                    Log("Đã tạo hợp đồng mẫu và cập nhật phòng + tenant.");
-                }
-
-                Log("✅ Seeding dữ liệu thành công!");
+                Log($"Da tao {roomList.Count} phong.");
+                Log("Seeding du lieu thanh cong!");
             }
             catch (Exception ex)
             {

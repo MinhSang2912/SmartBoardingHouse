@@ -25,8 +25,8 @@ namespace SmartBoardingHouse.Controllers
 
         public FloorsController(MongoDbService mongoService, IValidator<FloorRequest> validator, IMapper mapper)
         {
-            _floorCollection = mongoService.GetDatabase().GetCollection<Floor>("Floors");
-            _roomCollection = mongoService.GetDatabase().GetCollection<Room>("Rooms");
+            _floorCollection = mongoService.GetDatabase().GetCollection<Floor>("floors");
+            _roomCollection = mongoService.GetDatabase().GetCollection<Room>("rooms");
             _validator = validator;
             _mapper = mapper;
         }

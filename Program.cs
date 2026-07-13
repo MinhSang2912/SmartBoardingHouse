@@ -6,7 +6,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+// Cấu hình MongoDB Serializer
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
+using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Mappings;
 using SmartBoardingHouse.Models.Entity;
@@ -16,11 +20,18 @@ using SmartBoardingHouse.Models.Settings;
 using SmartBoardingHouse.Services;
 using System.Text;
 
+BsonSerializer.RegisterSerializer(new ObjectSerializer(ObjectSerializer.AllAllowedTypes));
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ====================== SERVICES ======================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new ObjectToInferredTypesConverter());
+});
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();
@@ -45,6 +56,7 @@ builder.Services.AddScoped<IValidator<MeterReadingRequest>, MeterReadingRequestV
 builder.Services.AddScoped<IValidator<RoomRequest>, RoomRequestValidation>();
 builder.Services.AddScoped<IValidator<UserRequest>, UserRequestValidation>();
 builder.Services.AddScoped<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
+builder.Services.AddScoped<IValidator<NotificationRequest>, NotificationRequestValidator>();
 
 
 // ====================== AUTOMAPPER ======================
@@ -58,6 +70,7 @@ var mapperConfig = new MapperConfiguration(cfg =>
     cfg.AddProfile<MeterReadingMappingProfile>();
     cfg.AddProfile<MaintenanceMappingProfile>();
     cfg.AddProfile<MessageMappingProfile>();
+    cfg.AddProfile<NotificationMappingProfile>();
 }, NullLoggerFactory.Instance);
 builder.Services.AddSingleton(mapperConfig.CreateMapper());
 

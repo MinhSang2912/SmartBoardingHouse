@@ -25,7 +25,7 @@ namespace SmartBoardingHouse.Controllers
 
         public UsersController(MongoDbService mongoService, IValidator<UserRequest> validator, IOptions<AdminSettings> adminSettings, IMapper mapper)
         {
-            _collection = mongoService.GetDatabase().GetCollection<User>("Users");
+            _collection = mongoService.GetDatabase().GetCollection<User>("users");
             _validator = validator;
             _adminSettings = adminSettings;
             _mapper = mapper;

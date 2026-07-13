@@ -33,10 +33,10 @@ namespace SmartBoardingHouse.Controllers
             ActivityLogService activityLogService)
         {
             var db = mongoService.GetDatabase();
-            _collection = db.GetCollection<Invoice>("Invoices");
-            _userCollection = db.GetCollection<User>("Users");
-            _roomCollection = db.GetCollection<Room>("Rooms");
-            _contractCollection = db.GetCollection<Contract>("Contracts");
+            _collection = db.GetCollection<Invoice>("invoices");
+            _userCollection = db.GetCollection<User>("users");
+            _roomCollection = db.GetCollection<Room>("rooms");
+            _contractCollection = db.GetCollection<Contract>("contracts");
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;

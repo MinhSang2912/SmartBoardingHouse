@@ -144,5 +144,15 @@
         public static string MessageMarkReadFailed() => "Đánh dấu tin nhắn đã đọc thất bại.";
         public static string MessageUnauthorized() => "Bạn không có quyền thực hiện thao tác này.";
         #endregion
+
+        #region Notification
+        public static string NotificationTenantIdRequired() => "TenantId là bắt buộc";
+        public static string NotificationTitleRequired() => "Tiêu đề thông báo không được để trống";
+        public static string NotificationTitleTooLong() => "Tiêu đề tối đa 200 ký tự";
+        public static string NotificationBodyRequired() => "Nội dung thông báo không được để trống";
+        public static string NotificationBodyTooLong() => "Nội dung tối đa 1000 ký tự";
+        public static string NotificationNotFound() => "Không tìm thấy thông báo";
+        public static string NotificationMarkReadFailed() => "Đánh dấu thông báo đã đọc thất bại";
+        #endregion
     }
 }
