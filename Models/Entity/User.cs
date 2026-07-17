@@ -33,7 +33,7 @@ namespace SmartBoardingHouse.Models.Entity
         public string? Address { get; set; }
 
         [BsonElement("dateOfBirth")]
-        public DateTime? DateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; } = null;
 
         // ObjectId ref tới Room hiện tại (khớp field "room" trong Tenant.js)
         [BsonElement("room")]

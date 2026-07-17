@@ -11,6 +11,7 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Models.Settings;
 using static SmartBoardingHouse.Common.Enums;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using Message = SmartBoardingHouse.Common.Message;
 
 namespace SmartBoardingHouse.Controllers

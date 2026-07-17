@@ -33,7 +33,7 @@ namespace SmartBoardingHouse.Controllers
             PhotoService photoService)
         {
             var db = mongoService.GetDatabase();
-            _collection = db.GetCollection<MeterReading>("meterReadings");
+            _collection = db.GetCollection<MeterReading>("meterreadings");
             _roomCollection = db.GetCollection<Room>("rooms");
             _contractCollection = db.GetCollection<Contract>("contracts");
             _validator = validator;
