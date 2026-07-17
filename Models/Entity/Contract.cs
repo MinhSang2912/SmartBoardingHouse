@@ -40,7 +40,7 @@ namespace SmartBoardingHouse.Models.Entity
         [BsonElement("paymentDate")]
         public int PaymentDate { get; set; }
 
-        [BsonElement("monthlyRent")]
+        [BsonElement("price")]
         public decimal Price { get; set; }
 
         [BsonElement("deposit")]

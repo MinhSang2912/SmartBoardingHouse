@@ -12,7 +12,7 @@ namespace SmartBoardingHouse.Models.Request
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public int PaymentDate { get; set; }
-        public decimal MonthlyRent { get; set; }
+        public decimal Price { get; set; }
     }
 
     public class ContractRequestValidation : AbstractValidator<ContractRequest>
@@ -33,7 +33,7 @@ namespace SmartBoardingHouse.Models.Request
                 .GreaterThan(x => x.StartDate).WithMessage(Message.ContractEndDateMustBeAfterStartDate());
            RuleFor(x => x.PaymentDate)
                 .InclusiveBetween(1, 31).WithMessage(Message.ContractPaymentDateIsInvalid());
-           RuleFor(x => x.MonthlyRent)
+           RuleFor(x => x.Price)
                 .GreaterThan(0).WithMessage(Message.ContractMonthlyRentMustBeGreaterThanZero());
         }
     }
