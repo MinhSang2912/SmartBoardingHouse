@@ -12,7 +12,7 @@ namespace SmartBoardingHouse.Models.Request
         public string PhoneNumber { get; set; } = string.Empty;
         public string IDCard { get; set; } = string.Empty;
         public string? Address {get; set; }
-        public DateTime? DateOfbirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
     }
 
     public class UserRequestValidation : AbstractValidator<UserRequest>

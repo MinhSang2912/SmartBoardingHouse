@@ -11,8 +11,8 @@ namespace SmartBoardingHouse.Mappings
         {
             CreateMap<UserRequest, User>()
                 .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src =>
-                    src.DateOfbirth.HasValue
-                        ? DateTime.SpecifyKind(src.DateOfbirth.Value.Date, DateTimeKind.Utc)
+                    src.DateOfBirth.HasValue
+                        ? DateTime.SpecifyKind(src.DateOfBirth.Value.Date, DateTimeKind.Utc)
                         : (DateTime?)null
                 ));
             CreateMap<User, UserResponse>();
