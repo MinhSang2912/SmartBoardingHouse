@@ -30,9 +30,6 @@ namespace SmartBoardingHouse.Models.Entity
         [BsonElement("roomNumber")]
         public string RoomNumber { get; set; } = string.Empty;
 
-        [BsonElement("tenantName")]
-        public string TenantName { get; set; } = string.Empty;
-
         [BsonElement("month")]
         public int BillingMonth { get; set; }
 

@@ -110,40 +110,49 @@ namespace SmartBoardingHouse.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<RoomResponse>> Update(string id, RoomRequest request)
         {
+            // Validate request
             var errors = await ValidateRequest(request);
 
+            // Kiểm tra phòng tồn tại
             var existingRoom = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingRoom is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
+            // Kiểm tra RoomNumber đã tồn tại chưa (trừ phòng hiện tại)
             var roomNumberExists = await _collection
                 .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id)
                 .AnyAsync();
+
             if (roomNumberExists)
                 errors.Add(CommonMessage.RoomNumberExists());
 
+            // Kiểm tra Floor tồn tại
             var floor = await _floorCollection
                 .Find(x => x.Id == request.FloorId)
                 .FirstOrDefaultAsync();
+
             if (floor is null)
                 errors.Add(CommonMessage.NotFound("Tầng"));
 
+            // Nếu có lỗi thì return ngay
             if (errors.Any())
                 return BadRequest(errors);
 
-            var updatedRoom = _mapper.Map<Room>(request);
-            updatedRoom.Id = id;
-            updatedRoom.CreatedAt = existingRoom.CreatedAt;
-            updatedRoom.UpdatedAt = DateTime.UtcNow;
+            // Map dữ liệu 
+            _mapper.Map(request, existingRoom);     
 
-            await _collection.ReplaceOneAsync(x => x.Id == id, updatedRoom);
+            existingRoom.UpdatedAt = DateTime.UtcNow;
 
+            // Cập nhật vào database
+            await _collection.ReplaceOneAsync(x => x.Id == id, existingRoom);
+
+            // Lấy dữ liệu bổ sung và trả về
             var floors = await _floorCollection.Find(_ => true).ToListAsync();
             var activeContracts = await _contractCollection
                 .Find(c => c.Status == ContractStatus.Active)
                 .ToListAsync();
 
-            return Ok(MapToResponse(updatedRoom, floors, activeContracts));
+            return Ok(MapToResponse(existingRoom, floors, activeContracts));
         }
 
         // DELETE: api/Rooms/{id}

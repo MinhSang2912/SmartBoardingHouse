@@ -28,7 +28,6 @@ namespace SmartBoardingHouse.Services
                 Description = description,
                 Amount = amount,
                 CreatedAt = DateTime.UtcNow
-                // Không gán Id nữa, để MongoDB tự sinh ObjectId
             };
 
             await _collection.InsertOneAsync(log);

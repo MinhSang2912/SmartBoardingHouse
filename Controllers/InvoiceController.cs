@@ -47,7 +47,8 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<List<InvoiceResponse>>> GetAll()
         {
             var invoices = await _collection.Find(_ => true).ToListAsync();
-            return Ok(invoices.Select(MapToResponse).ToList());
+            var responses = await Task.WhenAll(invoices.Select(MapToResponse));
+            return Ok(responses.ToList());
         }
 
         // GET: api/Invoices/{id}
@@ -58,7 +59,7 @@ namespace SmartBoardingHouse.Controllers
             if (invoice is null)
                 return NotFound(CommonMessage.NotFound("Hóa đơn"));
 
-            return Ok(MapToResponse(invoice));
+            return Ok(await MapToResponse(invoice));
         }
 
         // POST: api/Invoices
@@ -87,7 +88,7 @@ namespace SmartBoardingHouse.Controllers
 
             var contractExists = await _contractCollection
                 .Find(x => x.ContractNumber == request.ContractNumber)
-                .FirstOrDefaultAsync();    
+                .FirstOrDefaultAsync();
             if (contractExists is null)
                 errors.Add(CommonMessage.NotFound("Hợp đồng"));
 
@@ -107,7 +108,7 @@ namespace SmartBoardingHouse.Controllers
             invoice.RoomId = roomExists.Id;
 
             var amont = invoice.RoomPrice + (decimal)invoice.ElectricUsage * invoice.ElectricPrice + (decimal)invoice.WaterUsage * invoice.WaterPrice + invoice.ServiceFee;
-            if(request.Items != null && request.Items.Length > 0)
+            if (request.Items != null && request.Items.Length > 0)
             {
                 foreach (var item in request.Items)
                 {
@@ -122,12 +123,12 @@ namespace SmartBoardingHouse.Controllers
                     amont += total;
                 }
             }
-            invoice.Amount = amont; 
+            invoice.Amount = amont;
 
             await _collection.InsertOneAsync(invoice);
 
             return CreatedAtAction(nameof(GetById), new { id = invoice.Id },
-                MapToResponse(invoice));
+                await MapToResponse(invoice));
         }
 
         // PUT: api/Invoices/{id}
@@ -161,7 +162,7 @@ namespace SmartBoardingHouse.Controllers
         //    updatedInvoice.UpdatedAt = DateTime.UtcNow;
 
         //    await _collection.ReplaceOneAsync(x => x.Id == id, updatedInvoice);
-        //    return Ok(MapToResponse(updatedInvoice));
+        //    return Ok(await MapToResponse(updatedInvoice));
         //}
 
         // PUT: api/Invoices/{id}/pay
@@ -181,15 +182,15 @@ namespace SmartBoardingHouse.Controllers
                     .Set(x => x.Status, InvoiceStatus.Paid)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
-            await _activityLogService.LogAsync(
-                type: ActivityType.Payment,
-                userName: invoice.TenantName,
-                roomNumber: invoice.RoomNumber,
-                description: $"Đã thanh toán {invoice.Amount / 1_000_000:0.#} triệu đồng",
-                amount: invoice.Amount);
+            //await _activityLogService.LogAsync(
+            //    type: ActivityType.Payment,
+            //    userName: invoice.TenantName,
+            //    roomNumber: invoice.RoomNumber,
+            //    description: $"Đã thanh toán {invoice.Amount / 1_000_000:0.#} triệu đồng",
+            //    amount: invoice.Amount);
 
             invoice.Status = InvoiceStatus.Paid;
-            return Ok(MapToResponse(invoice));
+            return Ok(await MapToResponse(invoice));
         }
 
         // DELETE: api/Invoices/{id}
@@ -212,7 +213,7 @@ namespace SmartBoardingHouse.Controllers
             return result.Errors.Select(e => e.ErrorMessage).ToList();
         }
 
-        private InvoiceResponse MapToResponse(Invoice invoice)
+        private async Task<InvoiceResponse> MapToResponse(Invoice invoice)
         {
             var response = _mapper.Map<InvoiceResponse>(invoice);
             response.ElectricTotal = (decimal)response.ElectricUsage * response.ElectricPrice;
@@ -221,16 +222,20 @@ namespace SmartBoardingHouse.Controllers
             var effectiveStatus = invoice.Status == InvoiceStatus.Unpaid && invoice.DueDate < DateTime.Now
                 ? InvoiceStatus.Overdue
                 : invoice.Status;
-
             response.Status = effectiveStatus;
             response.StatusLabel = effectiveStatus switch
             {
-                InvoiceStatus.Paid    => "Đã thanh toán",
-                InvoiceStatus.Unpaid  => "Chờ thanh toán",
+                InvoiceStatus.Paid => "Đã thanh toán",
+                InvoiceStatus.Unpaid => "Chờ thanh toán",
                 InvoiceStatus.Overdue => "Quá hạn",
-                _                     => effectiveStatus.ToString()
+                _ => effectiveStatus.ToString()
             };
             response.BillingPeriod = "Tháng " + invoice.BillingMonth + "/" + invoice.BillingYear;
+
+            var tenant = await _userCollection
+                .Find(x => x.Id == invoice.TenantId)
+                .FirstOrDefaultAsync();
+            response.TenantName = tenant?.Name ?? "Không tìm thấy";
 
             return response;
         }

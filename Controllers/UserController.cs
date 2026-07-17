@@ -77,40 +77,46 @@ namespace SmartBoardingHouse.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<User>> Update(string id, UserRequest updatedUser)
+        public async Task<ActionResult<UserResponse>> Update(string id, UserRequest updatedUser)
         {
+            // Validate
             var validationResult = await _validator.ValidateAsync(updatedUser);
-            var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+                return BadRequest(errors);
+            }
 
-            var existingUser = await _collection.Find(x => x.Id == id && x.Role !="Admin").FirstOrDefaultAsync();
+            // Tìm user hiện tại
+            var existingUser = await _collection
+                .Find(x => x.Id == id && x.Role != "Admin")
+                .FirstOrDefaultAsync();
+
             if (existingUser is null)
                 return NotFound(Message.NotFound("User"));
 
-            if (errors.Any())
-                return BadRequest(errors);
+            // Map chỉ các trường cần updat
+            _mapper.Map(updatedUser, existingUser);          
 
-            var user = _mapper.Map<User>(updatedUser);
-            user.Id = id;
-            user.Role = "Tenant";
-            user.UpdatedAt = DateTime.UtcNow;
+            existingUser.UpdatedAt = DateTime.UtcNow;
 
-            // Không cho phép thay đổi password qua API
-            user.Password = existingUser.Password;
+            // Lưu vào DB
+            await _collection.ReplaceOneAsync(x => x.Id == id, existingUser);
 
-            await _collection.ReplaceOneAsync(x => x.Id == id, user);
-
-            var response = _mapper.Map<UserResponse>(user);
-
+            // Trả về response
+            var response = _mapper.Map<UserResponse>(existingUser);
             return Ok(response);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var result = await _collection.DeleteOneAsync(x => x.Id == id && x.Role != "Admin");
-            return result.DeletedCount > 0
-                ? Ok(Message.Deleted("User"))
-                : NotFound(Message.NotFound("User"));
+            var user = await _collection.Find(x => x.Id == id && x.Role != "Admin").FirstOrDefaultAsync();
+            if (user == null)
+                return NotFound(Message.NotFound("Người dùng"));
+
+            user.IsActive = false;
+            return Ok(Message.Deleted("Người dùng"));
         }
     }
 }

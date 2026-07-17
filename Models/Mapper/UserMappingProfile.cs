@@ -10,6 +10,8 @@ namespace SmartBoardingHouse.Mappings
         public UserMappingProfile()
         {
             CreateMap<UserRequest, User>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())         
+                .ForMember(dest => dest.Password, opt => opt.Ignore())
                 .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src =>
                     src.DateOfBirth.HasValue
                         ? DateTime.SpecifyKind(src.DateOfBirth.Value.Date, DateTimeKind.Utc)

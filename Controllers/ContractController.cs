@@ -70,14 +70,14 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.ContractNumber == request.ContractNumber)
                 .AnyAsync();
             if (contractExists)
-                errors.Add(CommonMessage.ContractNumberExists(request.ContractNumber));
+                return BadRequest(CommonMessage.ContractNumberExists(request.ContractNumber));
 
-            //Số phòng tồn tại
+            // Tìm xem có số phòng không
             var roomExists = await _roomCollection
                 .Find(x => x.RoomNumber == request.RoomNumber)
                 .FirstOrDefaultAsync();
             if (roomExists is null)
-                errors.Add(CommonMessage.NotFound("Phòng"));
+                return BadRequest(CommonMessage.NotFound("Phòng"));
 
             //Phòng đã có hợp đồng đang hiệu lực
             if (roomExists is not null)
@@ -90,13 +90,13 @@ namespace SmartBoardingHouse.Controllers
                     errors.Add(CommonMessage.ContractRoomIsExists());
             }
 
-            // Người thuê tồn tại
+            // Tìm xem có người thuê đó không
             var userExists = await _userCollection
                 .Find(x => x.Name == request.TenantName)
                 .FirstOrDefaultAsync();
 
             if (userExists is null)
-                errors.Add(CommonMessage.NotFound("Người thuê"));
+                return BadRequest(CommonMessage.NotFound("Người thuê"));
 
             // Người thuê đã có hợp đồng đang hiệu lực
             if (userExists is not null)
@@ -106,11 +106,8 @@ namespace SmartBoardingHouse.Controllers
                              && x.Status == ContractStatus.Active)
                     .AnyAsync();
                 if (activeContractExistsForTenant)
-                    errors.Add(CommonMessage.ContractTenantIsExists());
+                    return BadRequest(CommonMessage.ContractTenantIsExists());
             }
-
-            if (errors.Any())
-                return BadRequest(errors);
 
             if (roomExists is null || userExists is null)
             {

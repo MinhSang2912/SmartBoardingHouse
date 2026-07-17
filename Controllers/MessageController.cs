@@ -9,6 +9,7 @@ using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Service;
 using SmartBoardingHouse.Services;
 using System.Security.Claims;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -83,6 +84,11 @@ namespace SmartBoardingHouse.Controllers
             message.IsRead = false;
             message.ReadAt = null;
             message.CreatedAt = DateTime.UtcNow;
+
+            if (request.Type == MessageType.Image)
+                request.Content = null;
+            else if(request.Type == MessageType.Text)
+                request.Image = null;
 
             await _messageCollection.InsertOneAsync(message);
 

@@ -10,8 +10,8 @@ namespace SmartBoardingHouse.Mappings
     {
         public RoomMappingProfile()
         {
-            CreateMap<RoomRequest, Room>();
-            CreateMap<RoomRequest, Room>();
+            CreateMap<RoomRequest, Room>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore());
             CreateMap<Room, RoomResponse>()
                 .ForMember(dest => dest.StatusLabel, opt => opt.Ignore())
                 .ForMember(dest => dest.TenantName, opt => opt.Ignore());

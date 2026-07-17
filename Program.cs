@@ -35,7 +35,7 @@ builder.Services.AddControllers()
 
 // Đăng ký SignalR
 builder.Services.AddSignalR();
-builder.Services.AddScoped<ChatService>();
+builder.Services.AddHttpClient<ChatService>();
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();
@@ -49,6 +49,8 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 // ====================== ADMIN SETTINGS ======================
 builder.Services.Configure<AdminSettings>(
     builder.Configuration.GetSection("AdminAccount"));
+
+
 
 // ====================== VALIDATORS ======================
 builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidation>();
