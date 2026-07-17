@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Entity
 {
@@ -54,5 +55,14 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("isActive")]
         public bool IsActive { get; set; } = true;
+
+        [BsonElement("resetOtp")]
+        public string? ResetOtp { get; set; }
+
+        [BsonElement("resetOtpExpiry")]
+        public DateTime? ResetOtpExpiry { get; set; }
+
+        [BsonElement("role")]
+        public string Role { get; set; } = "Tenant";
     }
 }

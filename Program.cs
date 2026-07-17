@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-// Cấu hình MongoDB Serializer
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
@@ -17,6 +16,7 @@ using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Mapper;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Settings;
+using SmartBoardingHouse.Service;
 using SmartBoardingHouse.Services;
 using System.Text;
 
@@ -29,9 +29,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.Converters.Add(new ObjectToInferredTypesConverter());
-});
+    {
+        options.JsonSerializerOptions.Converters.Add(new ObjectToInferredTypesConverter());
+    });
+
+// Đăng ký SignalR
+builder.Services.AddSignalR();
+builder.Services.AddScoped<ChatService>();
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();
@@ -41,6 +45,7 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
     var mongoService = sp.GetRequiredService<MongoDbService>();
     return mongoService.GetDatabase();
 });
+
 // ====================== ADMIN SETTINGS ======================
 builder.Services.Configure<AdminSettings>(
     builder.Configuration.GetSection("AdminAccount"));
@@ -57,7 +62,6 @@ builder.Services.AddScoped<IValidator<RoomRequest>, RoomRequestValidation>();
 builder.Services.AddScoped<IValidator<UserRequest>, UserRequestValidation>();
 builder.Services.AddScoped<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
 builder.Services.AddScoped<IValidator<NotificationRequest>, NotificationRequestValidator>();
-
 
 // ====================== AUTOMAPPER ======================
 var mapperConfig = new MapperConfiguration(cfg =>
@@ -103,6 +107,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = false,
             ClockSkew = TimeSpan.Zero
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/chat"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // ====================== CORS ======================
@@ -113,7 +134,8 @@ builder.Services.AddCors(options =>
         {
             policy.WithOrigins("http://localhost:5173")
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials(); 
         });
 });
 
@@ -187,12 +209,12 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseHttpsRedirection();
 app.UseCors("AllowReact");
 
-
 // Authentication phải trước Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ====================== ROUTES ======================
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

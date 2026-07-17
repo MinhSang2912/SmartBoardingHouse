@@ -10,10 +10,7 @@ namespace SmartBoardingHouse.Mappings
         public UserMappingProfile()
         {
             CreateMap<UserRequest, User>();
-            CreateMap<User, UserResponse>()
-                .ForMember(dest => dest.RoomDeposit, opt => opt.Ignore())
-                .ForMember(dest => dest.Price, opt => opt.Ignore())
-                .ForMember(dest => dest.StartDate, opt => opt.Ignore());
+            CreateMap<User, UserResponse>();
         }
     }
 }

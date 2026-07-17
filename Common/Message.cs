@@ -15,7 +15,7 @@
         public static string UserNameIsRequired() => "Tên là bắt buộc.";
         public static string UserPasswordIsRequired() => "Mật khẩu là bắt buộc.";
         public static string UserRoleIsRequired() => "Vai trò là bắt buộc.";
-        public static string UserRoleIsInvalid() => "Giá trị vai trò không hợp lệ.";
+        public static string UserRoleIsInvalid() => "Vai trò không hợp lệ.";
         public static string UserIDCardNumberIsRequired() => "Số CMND/CCCD là bắt buộc.";
         public static string UserIDCardNumberIsTooShort() => "Số CMND/CCCD phải có ít nhất 10 ký tự.";
         public static string UserIDCardNumberExists(string idCardNumber) => $"Người dùng với số CMND/CCCD '{idCardNumber}' đã tồn tại.";

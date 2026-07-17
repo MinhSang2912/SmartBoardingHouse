@@ -2,14 +2,13 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
+using SmartBoardingHouse.Service;
 using SmartBoardingHouse.Services;
 using System.Security.Claims;
-using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -22,21 +21,24 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMapper _mapper;
         private readonly IValidator<SendMessageRequest> _validator;
         private readonly PhotoService _photoService;
+        private readonly ChatService _chatService;
 
         public MessageController(
             IMongoDatabase database,
             IMapper mapper,
             IValidator<SendMessageRequest> validator,
-            PhotoService photoService)
+            PhotoService photoService,
+            ChatService chatService)
         {
             _messageCollection = database.GetCollection<Message>("messages");
             _mapper = mapper;
             _validator = validator;
             _photoService = photoService;
+            _chatService = chatService;
         }
 
         /// <summary>
-        /// Gửi tin nhắn mới (hỗ trợ kèm ảnh) - Tự động tạo ConversationId
+        /// Gửi tin nhắn mới (hỗ trợ kèm ảnh)
         /// </summary>
         [HttpPost("send")]
         public async Task<IActionResult> SendMessage([FromForm] SendMessageRequest request)
@@ -45,18 +47,27 @@ namespace SmartBoardingHouse.Controllers
             if (!validationResult.IsValid)
                 return BadRequest(validationResult.Errors);
 
-            // Tự động tạo ConversationId nếu chưa có
-            string conversationId = GenerateConversationId(request.SenderId, request.ReceiverId);
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentRole = User.FindFirst(ClaimTypes.Role)?.Value; 
+
+            if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentRole))
+                return Unauthorized();
+
+            // Xác định TenantId của cuộc hội thoại:
+            // - Tenant gửi: luôn là chính họ (không tin request từ client)
+            // - Admin gửi: phải chỉ định đang nói chuyện với tenant nào qua request.TenantId
+            string tenantId = currentRole == "Admin" ? request.TenantId : currentUserId;
+
+            if (string.IsNullOrEmpty(tenantId))
+                return BadRequest(new { message = "TenantId là bắt buộc" });
 
             string? imageUrl = null;
 
-            // Upload ảnh nếu có
             if (request.Image != null && request.Image.Length > 0)
             {
                 try
                 {
-                    var uploaderId = request.SenderId; // Hoặc lấy từ JWT
-                    imageUrl = await _photoService.SaveMaintenancePhotoAsync(request.Image, uploaderId, "Messages");
+                    imageUrl = await _photoService.SaveMaintenancePhotoAsync(request.Image, currentUserId, "Messages");
                 }
                 catch (Exception ex)
                 {
@@ -66,7 +77,8 @@ namespace SmartBoardingHouse.Controllers
 
             var message = _mapper.Map<Message>(request);
 
-            message.ConversationId = conversationId;
+            message.ConversationId = tenantId;
+            message.SenderRole = currentRole;
             message.ImageUrl = imageUrl;
             message.IsRead = false;
             message.ReadAt = null;
@@ -75,16 +87,10 @@ namespace SmartBoardingHouse.Controllers
             await _messageCollection.InsertOneAsync(message);
 
             var response = _mapper.Map<MessageResponse>(message);
-            return Ok(response);
-        }
 
-        /// <summary>
-        /// Tạo ConversationId từ 2 userId (luôn giống nhau dù ai gửi trước)
-        /// </summary>
-        private string GenerateConversationId(string user1, string user2)
-        {
-            var ids = new[] { user1, user2 }.OrderBy(id => id).ToArray();
-            return string.Join("_", ids);
+            await _chatService.PushNewMessageAsync(response, tenantId);
+
+            return Ok(response);
         }
 
         [HttpGet("conversation/{conversationId}")]
@@ -109,15 +115,18 @@ namespace SmartBoardingHouse.Controllers
             if (string.IsNullOrEmpty(id))
                 return BadRequest(new { message = "Message Id là bắt buộc" });
 
+            var existing = await _messageCollection.Find(m => m.Id == id).FirstOrDefaultAsync();
+            if (existing == null)
+                return NotFound(new { message = "Không tìm thấy tin nhắn" });
+
             var update = Builders<Message>.Update
                 .Set(m => m.IsRead, true)
                 .Set(m => m.ReadAt, DateTime.UtcNow)
                 .Set(m => m.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _messageCollection.UpdateOneAsync(m => m.Id == id, update);
+            await _messageCollection.UpdateOneAsync(m => m.Id == id, update);
 
-            if (result.ModifiedCount == 0)
-                return NotFound(new { message = "Không tìm thấy tin nhắn" });
+            await _chatService.PushMessageReadAsync(existing.SenderRole, existing.ConversationId, id);
 
             return Ok(new { message = "Đã đánh dấu tin nhắn là đã đọc" });
         }
@@ -136,6 +145,8 @@ namespace SmartBoardingHouse.Controllers
             await _messageCollection.UpdateManyAsync(
                 m => m.ConversationId == conversationId && !m.IsRead,
                 update);
+
+            await _chatService.PushConversationReadAsync(conversationId);
 
             return Ok(new { message = "Đã đánh dấu tất cả tin nhắn là đã đọc" });
         }

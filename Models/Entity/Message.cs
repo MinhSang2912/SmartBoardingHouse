@@ -11,21 +11,17 @@ namespace SmartBoardingHouse.Models.Entity
     public class Message : BaseModel
     {
         [BsonElement("conversationId")]
+        [BsonRepresentation(BsonType.ObjectId)]
         public string ConversationId { get; set; } = string.Empty;
 
-        [BsonElement("sender")]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string SenderId { get; set; } = string.Empty;
-
-        [BsonElement("receiver")]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string ReceiverId { get; set; } = string.Empty;
+        [BsonElement("senderRole")]
+        public string SenderRole { get; set; } = string.Empty;
 
         [BsonElement("content")]
         public string Content { get; set; } = string.Empty;
 
         [BsonElement("type")]
-        public MessageType Type { get; set; } = MessageType.Text;
+        public string Type { get; set; } = "Text";
 
         [BsonElement("imageUrl")]
         public string? ImageUrl { get; set; }

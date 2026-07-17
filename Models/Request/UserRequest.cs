@@ -27,7 +27,6 @@ namespace SmartBoardingHouse.Models.Request
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage(Message.LoginEmailIsRequired())
                 .EmailAddress().WithMessage(Message.LoginEmailIsInvalid());
-
         }
     }
 }

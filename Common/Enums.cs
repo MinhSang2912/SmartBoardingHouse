@@ -2,6 +2,11 @@
 {
     public class Enums
     {
+        public enum Role
+        {
+            Admin = 0,
+            Tenant = 1
+        }
         public enum ContractStatus
         {
             Active = 0,

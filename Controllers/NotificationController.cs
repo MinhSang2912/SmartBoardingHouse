@@ -6,6 +6,7 @@ using MongoDB.Driver;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
+using SmartBoardingHouse.Service;
 using System.Security.Claims;
 
 namespace SmartBoardingHouse.Controllers
@@ -18,15 +19,18 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<Notification> _notificationCollection;
         private readonly IMapper _mapper;
         private readonly IValidator<NotificationRequest> _validator;
+        private readonly ChatService _chatService;
 
         public NotificationController(
             IMongoDatabase database,
             IMapper mapper,
-            IValidator<NotificationRequest> validator)
+            IValidator<NotificationRequest> validator,
+            ChatService chatService)
         {
             _notificationCollection = database.GetCollection<Notification>("notifications");
             _mapper = mapper;
             _validator = validator;
+            _chatService = chatService;
         }
 
         /// <summary>
@@ -47,7 +51,11 @@ namespace SmartBoardingHouse.Controllers
 
             await _notificationCollection.InsertOneAsync(notification);
 
+
             var response = _mapper.Map<NotificationResponse>(notification);
+
+            await _chatService.PushNotificationAsync(response, notification.TenantId);
+
             return Ok(response);
         }
 
@@ -75,6 +83,67 @@ namespace SmartBoardingHouse.Controllers
                 .ToListAsync();
 
             var response = _mapper.Map<List<NotificationResponse>>(notifications);
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Lấy tất cả thông báo do Admin đã tạo (toàn hệ thống, không lọc theo tenant)
+        /// </summary>
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllNotifications(int page = 1, int pageSize = 20, bool? isRead = null)
+        {
+            var filter = isRead.HasValue
+                ? Builders<Notification>.Filter.Eq(n => n.IsRead, isRead.Value)
+                : Builders<Notification>.Filter.Empty;
+
+            var totalCount = await _notificationCollection.CountDocumentsAsync(filter);
+
+            var notifications = await _notificationCollection.Find(filter)
+                .SortByDescending(n => n.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            var response = _mapper.Map<List<NotificationResponse>>(notifications);
+
+            return Ok(new
+            {
+                totalCount,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                data = response
+            });
+        }
+
+        /// <summary>
+        /// Lấy danh sách thông báo theo userId cụ thể
+        /// </summary>
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetNotificationsByUserId(
+            string userId,
+            int page = 1,
+            int pageSize = 20,
+            bool? isRead = null)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(new { message = "UserId là bắt buộc" });
+
+            var filter = Builders<Notification>.Filter.Eq(n => n.TenantId, userId);
+
+            if (isRead.HasValue)
+                filter &= Builders<Notification>.Filter.Eq(n => n.IsRead, isRead.Value);
+
+            var totalCount = await _notificationCollection.CountDocumentsAsync(filter);
+
+            var notifications = await _notificationCollection.Find(filter)
+                .SortByDescending(n => n.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            var response = _mapper.Map<List<NotificationResponse>>(notifications);
+
             return Ok(response);
         }
 
