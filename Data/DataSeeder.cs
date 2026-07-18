@@ -41,8 +41,8 @@ namespace SmartBoardingHouse.Data
                 // 1. Seed Floors
                 var floors = new List<Floor>
                 {
-                    new Floor { FloorNumber = 1, RoomCount = 2 },
-                    new Floor { FloorNumber = 2, RoomCount = 2 }
+                    new Floor { FloorNumber = 1, Name="Tầng 1",Description="Tầng trệt" },
+                    new Floor { FloorNumber = 2, Name="Tầng 2",Description="Tầng thứ hai" },
                 };
 
                 await floorCol.InsertManyAsync(floors);

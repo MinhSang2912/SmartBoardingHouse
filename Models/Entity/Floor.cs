@@ -17,8 +17,5 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("description")]
         public string? Description { get; set; }
-
-        [BsonIgnore]
-        public int RoomCount { get; set; }
     }
 }

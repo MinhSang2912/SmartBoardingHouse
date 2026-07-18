@@ -56,6 +56,7 @@
         public static string ContractEndDateMustBeAfterStartDate() => "Ngày kết thúc phải sau ngày bắt đầu.";
         public static string ContractPaymentDateIsInvalid() => "Ngày thanh toán phải nằm trong khoảng từ 1 đến 31.";
         public static string ContractStatusIsInvalid() => "Trạng thái hợp đồng không hợp lệ.";
+        public static string ContractStatusNotActive() => "Hợp đồng không hoạt động";
         public static string ContractMonthlyRentMustBeGreaterThanZero() => "Tiền thuê hàng tháng phải lớn hơn 0.";
         public static string ContractDepositMustBeNonNegative() => "Tiền đặt cọc phải lớn hơn hoặc bằng 0.";
         public static string ContractNumberExists(string contractNumber) => $"Hợp đồng số '{contractNumber}' đã tồn tại.";

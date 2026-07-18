@@ -137,7 +137,8 @@ namespace SmartBoardingHouse.Controllers
             if (existingFloor is null)
                 return NotFound(CommonMessage.NotFound("Tầng"));
 
-            if (existingFloor.RoomCount != 0)
+            var roomCount = await _roomCollection.CountDocumentsAsync(x => x.FloorId == id);
+            if (roomCount > 0)
                 return BadRequest(CommonMessage.FloorHasRooms());
 
             await _floorCollection.DeleteOneAsync(x => x.Id == id);

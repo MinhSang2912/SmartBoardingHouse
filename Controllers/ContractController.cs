@@ -190,7 +190,7 @@ namespace SmartBoardingHouse.Controllers
                 return NotFound(CommonMessage.NotFound("Hợp đồng"));
 
             if (contract.Status != ContractStatus.Active)
-                return BadRequest(CommonMessage.ContractStatusIsInvalid());
+                return BadRequest(CommonMessage.ContractStatusNotActive());
 
             await _contractCollection.UpdateOneAsync(
                 x => x.Id == id,
@@ -207,7 +207,7 @@ namespace SmartBoardingHouse.Controllers
             await _userCollection.UpdateOneAsync(
                 x => x.Name == contract.TenantName,
                 Builders<User>.Update
-                    .Set(x => x.RoomNumber, null)
+                    .Set(x => x.RoomNumber, "Chưa có phòng")
                     .Set(x => x.RoomId, null)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
@@ -217,7 +217,6 @@ namespace SmartBoardingHouse.Controllers
                 roomNumber: contract.RoomNumber,
                 description: string.Empty);
 
-            contract.Status = ContractStatus.Terminated;
             return Ok(MapToResponse(contract));
         }
 

@@ -22,6 +22,7 @@ namespace SmartBoardingHouse.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IMongoCollection<User> _collection;
+        private readonly IMongoCollection<Contract> _contractCollection;
         private readonly IValidator<UserRequest> _validator;
         private readonly IOptions<AdminSettings> _adminSettings;
         private readonly IMapper _mapper;
@@ -29,6 +30,7 @@ namespace SmartBoardingHouse.Controllers
         public UsersController(MongoDbService mongoService, IValidator<UserRequest> validator, IOptions<AdminSettings> adminSettings, IMapper mapper)
         {
             _collection = mongoService.GetDatabase().GetCollection<User>("users");
+            _contractCollection = mongoService.GetDatabase().GetCollection<Contract>("contracts");
             _validator = validator;
             _adminSettings = adminSettings;
             _mapper = mapper;
@@ -114,6 +116,11 @@ namespace SmartBoardingHouse.Controllers
             var user = await _collection.Find(x => x.Id == id && x.Role != "Admin").FirstOrDefaultAsync();
             if (user == null)
                 return NotFound(Message.NotFound("Người dùng"));
+
+            var existingContract = await _contractCollection.Find(x => x.TenantId == id 
+                        && x.Status == ContractStatus.Active).FirstOrDefaultAsync();
+            if (existingContract is not null)
+                return BadRequest(Message.UserHasActiveContract());
 
             user.IsActive = false;
             return Ok(Message.Deleted("Người dùng"));
