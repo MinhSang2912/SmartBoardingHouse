@@ -8,6 +8,7 @@ using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
+using SmartBoardingHouse.Service;
 using static SmartBoardingHouse.Common.Enums;
 using Microsoft.AspNetCore.Authorization;
 
@@ -25,12 +26,14 @@ namespace SmartBoardingHouse.Controllers
         private readonly IValidator<InvoiceRequest> _validator;
         private readonly IMapper _mapper;
         private readonly ActivityLogService _activityLogService;
+        private readonly INotificationService _notificationService;
 
         public InvoicesController(
             MongoDbService mongoService,
             IValidator<InvoiceRequest> validator,
             IMapper mapper,
-            ActivityLogService activityLogService)
+            ActivityLogService activityLogService,
+            INotificationService notificationService)
         {
             var db = mongoService.GetDatabase();
             _collection = db.GetCollection<Invoice>("invoices");
@@ -40,6 +43,7 @@ namespace SmartBoardingHouse.Controllers
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
+            _notificationService = notificationService;
         }
 
         // GET: api/Invoices
@@ -127,6 +131,14 @@ namespace SmartBoardingHouse.Controllers
 
             await _collection.InsertOneAsync(invoice);
 
+            await _notificationService.CreateAsync(
+                tenantId: invoice.TenantId,
+                title: "Hóa đơn mới",
+                body: $"Hóa đơn {invoice.InvoiceNumber} tháng {invoice.BillingMonth}/{invoice.BillingYear} với số tiền {invoice.Amount:N0}đ đã được tạo. Hạn thanh toán: {invoice.DueDate:dd/MM/yyyy}.",
+                type: NotificationType.Invoice,
+                refId: invoice.Id,
+                refModel: "Invoice");
+
             return CreatedAtAction(nameof(GetById), new { id = invoice.Id },
                 await MapToResponse(invoice));
         }
@@ -190,6 +202,15 @@ namespace SmartBoardingHouse.Controllers
             //    amount: invoice.Amount);
 
             invoice.Status = InvoiceStatus.Paid;
+
+            await _notificationService.CreateAsync(
+                tenantId: invoice.TenantId,
+                title: "Thanh toán thành công",
+                body: $"Hóa đơn {invoice.InvoiceNumber} đã được xác nhận thanh toán {invoice.Amount:N0}đ.",
+                type: NotificationType.Invoice,
+                refId: invoice.Id,
+                refModel: "Invoice");
+
             return Ok(await MapToResponse(invoice));
         }
 

@@ -19,22 +19,22 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<Notification> _notificationCollection;
         private readonly IMapper _mapper;
         private readonly IValidator<NotificationRequest> _validator;
-        private readonly ChatService _chatService;
+        private readonly INotificationService _notificationService;
 
         public NotificationController(
             IMongoDatabase database,
             IMapper mapper,
             IValidator<NotificationRequest> validator,
-            ChatService chatService)
+            INotificationService notificationService)
         {
             _notificationCollection = database.GetCollection<Notification>("notifications");
             _mapper = mapper;
             _validator = validator;
-            _chatService = chatService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
-        /// Tạo thông báo mới
+        /// Tạo thông báo mới (thủ công, do Admin gửi)
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateNotification([FromBody] NotificationRequest request)
@@ -43,18 +43,17 @@ namespace SmartBoardingHouse.Controllers
             if (!validationResult.IsValid)
                 return BadRequest(validationResult.Errors);
 
-            var notification = _mapper.Map<Notification>(request);
-            notification.IsRead = false;
-            notification.ReadAt = null;
-            notification.CreatedAt = DateTime.UtcNow;
-            notification.Meta = request.Meta;
+            var response = await _notificationService.CreateAsync(
+                tenantId: request.TenantId,
+                title: request.Title,
+                body: request.Body,
+                type: request.Type,
+                refId: request.RefId,
+                refModel: request.RefModel,
+                meta: request.Meta);
 
-            await _notificationCollection.InsertOneAsync(notification);
-
-
-            var response = _mapper.Map<NotificationResponse>(notification);
-
-            await _chatService.PushNotificationAsync(response, notification.TenantId);
+            if (response is null)
+                return StatusCode(500, new { message = "Không thể tạo thông báo, vui lòng thử lại" });
 
             return Ok(response);
         }

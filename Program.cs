@@ -95,6 +95,9 @@ builder.Services.AddSingleton<PhotoService>();
 // JwtService - tạo và xác thực JWT token
 builder.Services.AddSingleton<JwtService>();
 
+// NotificationService - tạo thông báo tự động
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
 // ====================== JWT AUTHENTICATION ======================
 var jwtKey = builder.Configuration["Jwt:SecretKey"] ?? "SmartBoardingHouseSecretKey2026!!";
 

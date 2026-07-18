@@ -76,7 +76,8 @@
             Invoice = 1,
             Debt = 2,
             Maintenance = 3,
-            Message = 4
+            Message = 4,
+            Contract = 5
         }
     }
 }

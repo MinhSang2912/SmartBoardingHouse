@@ -8,6 +8,7 @@ using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
+using SmartBoardingHouse.Service;
 using static SmartBoardingHouse.Common.Enums;
 using Microsoft.AspNetCore.Authorization;
 
@@ -24,12 +25,14 @@ namespace SmartBoardingHouse.Controllers
         private readonly IValidator<ContractRequest> _validator;
         private readonly IMapper _mapper;
         private readonly ActivityLogService _activityLogService;
+        private readonly INotificationService _notificationService;
 
         public ContractsController(
             MongoDbService mongoService,
             IValidator<ContractRequest> validator,
             IMapper mapper,
-            ActivityLogService activityLogService)
+            ActivityLogService activityLogService,
+            INotificationService notificationService)
         {
             var db = mongoService.GetDatabase();
             _contractCollection = db.GetCollection<Contract>("contracts");
@@ -38,6 +41,7 @@ namespace SmartBoardingHouse.Controllers
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
+            _notificationService = notificationService;
         }
 
         // GET: api/Contracts
@@ -143,6 +147,14 @@ namespace SmartBoardingHouse.Controllers
                 roomNumber: contract.RoomNumber,
                 description: string.Empty);
 
+            await _notificationService.CreateAsync(
+                tenantId: contract.TenantId,
+                title: "Hợp đồng mới đã được tạo",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được tạo thành công.",
+                type: NotificationType.Contract,
+                refId: contract.Id,
+                refModel: "Contract");
+
             return CreatedAtAction(nameof(GetById), new { id = contract.Id },
                 MapToResponse(contract));
         }
@@ -217,6 +229,14 @@ namespace SmartBoardingHouse.Controllers
                 roomNumber: contract.RoomNumber,
                 description: string.Empty);
 
+            await _notificationService.CreateAsync(
+                tenantId: contract.TenantId,
+                title: "Hợp đồng đã chấm dứt",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt.",
+                type: NotificationType.Contract,
+                refId: contract.Id,
+                refModel: "Contract");
+
             return Ok(MapToResponse(contract));
         }
 
@@ -243,6 +263,15 @@ namespace SmartBoardingHouse.Controllers
 
             contract.EndDate = newEndDate;
             contract.Status = ContractStatus.Active;
+
+            await _notificationService.CreateAsync(
+                tenantId: contract.TenantId,
+                title: "Hợp đồng đã được gia hạn",
+                body: $"Hợp đồng số {contract.ContractNumber} đã được gia hạn đến ngày {newEndDate:dd/MM/yyyy}.",
+                type: NotificationType.Contract,
+                refId: contract.Id,
+                refModel: "Contract");
+
             return Ok(MapToResponse(contract));
         }
 

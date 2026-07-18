@@ -8,6 +8,7 @@ using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Services;
+using SmartBoardingHouse.Service;
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
@@ -21,12 +22,14 @@ namespace SmartBoardingHouse.Controllers
         private readonly IValidator<MaintenanceRequestRequest> _validator;
         private readonly IMapper _mapper;
         private readonly ActivityLogService _activityLogService;
+        private readonly INotificationService _notificationService;
 
         public MaintenanceRequestsController(
             MongoDbService mongoService,
             IValidator<MaintenanceRequestRequest> validator,
             IMapper mapper,
-            ActivityLogService activityLogService)
+            ActivityLogService activityLogService,
+            INotificationService notificationService)
         {
             var db = mongoService.GetDatabase();
             _collection = db.GetCollection<MaintenanceRequest>("maintenancerequests");
@@ -34,6 +37,7 @@ namespace SmartBoardingHouse.Controllers
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
+            _notificationService = notificationService;
         }
 
         // GET: api/MaintenanceRequests
@@ -146,6 +150,15 @@ namespace SmartBoardingHouse.Controllers
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
             item.Status = MaintenanceStatus.InProgress;
+
+            await _notificationService.CreateAsync(
+                tenantId: item.TenantId,
+                title: "Yêu cầu sửa chữa đang được xử lý",
+                body: $"Yêu cầu \"{item.Title}\" (phòng {item.RoomNumber}) của bạn đang được xử lý.",
+                type: NotificationType.Maintenance,
+                refId: item.Id,
+                refModel: "MaintenanceRequest");
+
             return Ok(MapToResponse(item));
         }
 
@@ -173,6 +186,15 @@ namespace SmartBoardingHouse.Controllers
                 description: item.Title);
 
             item.Status = MaintenanceStatus.Completed;
+
+            await _notificationService.CreateAsync(
+                tenantId: item.TenantId,
+                title: "Yêu cầu sửa chữa đã hoàn thành",
+                body: $"Yêu cầu \"{item.Title}\" (phòng {item.RoomNumber}) của bạn đã được xử lý xong.",
+                type: NotificationType.Maintenance,
+                refId: item.Id,
+                refModel: "MaintenanceRequest");
+
             return Ok(MapToResponse(item));
         }
 
