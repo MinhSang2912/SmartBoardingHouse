@@ -145,12 +145,12 @@ namespace SmartBoardingHouse.Controllers
                 type: ActivityType.CheckIn,
                 userName: contract.TenantName,
                 roomNumber: contract.RoomNumber,
-                description: string.Empty);
+                description: $"Phòng {contract.RoomNumber} được {contract.TenantName} thuê vào {DateTime.Now:dd/MM/yyyy}" );
 
             await _notificationService.CreateAsync(
                 tenantId: contract.TenantId,
                 title: "Hợp đồng mới đã được tạo",
-                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được tạo thành công.",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được tạo thành công, phòng đã được thuê bởi {contract.TenantName}",
                 type: NotificationType.Contract,
                 refId: contract.Id,
                 refModel: "Contract");
@@ -227,12 +227,12 @@ namespace SmartBoardingHouse.Controllers
                 type: ActivityType.CheckOut,
                 userName: contract.TenantName,
                 roomNumber: contract.RoomNumber,
-                description: string.Empty);
+                description: $"Phòng {contract.RoomNumber} được {contract.TenantName} trả phòng vào {DateTime.Now:dd/MM/yyyy}");
 
             await _notificationService.CreateAsync(
                 tenantId: contract.TenantId,
                 title: "Hợp đồng đã chấm dứt",
-                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt.",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt, người thuê {contract.ContractNumber} đã trả phòng",
                 type: NotificationType.Contract,
                 refId: contract.Id,
                 refModel: "Contract");

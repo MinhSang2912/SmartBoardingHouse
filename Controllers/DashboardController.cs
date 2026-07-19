@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using MongoDB.Bson;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
@@ -23,7 +22,7 @@ namespace SmartBoardingHouse.Controllers
             var db = mongoService.GetDatabase();
             _roomCollection = db.GetCollection<Room>("rooms");
             _invoiceCollection = db.GetCollection<Invoice>("invoices");
-            _activityLogCollection = db.GetCollection<ActivityLog>("activityLogs");
+            _activityLogCollection = db.GetCollection<ActivityLog>("activitylogs");
         }
 
         // GET: api/Dashboard
@@ -42,45 +41,38 @@ namespace SmartBoardingHouse.Controllers
             var currentMonth = now.Month;
             var currentYear = now.Year;
 
-            // Doanh thu tháng hiện tại
-            var monthlyRevenue = await _invoiceCollection.Aggregate()
-                .Match(i => i.DueDate.Month == currentMonth
-                         && i.DueDate.Year == currentYear
-                         && i.Status == InvoiceStatus.Paid)
-                .Group(new BsonDocument
-                {
-                    { "_id", BsonNull.Value },
-                    { "total", new BsonDocument("$sum", "$Amount") }
-                })
+            // Doanh thu tháng hiện tại (chỉ tính hóa đơn đã thanh toán, theo kỳ hóa đơn - BillingMonth/BillingYear
+            // chứ không dùng DueDate vì hạn thanh toán có thể lệch sang tháng khác so với kỳ hóa đơn thực tế)
+            var monthlyRevenueResult = await _invoiceCollection.Aggregate()
+                .Match(i => i.Status == InvoiceStatus.Paid
+                         && i.BillingMonth == currentMonth
+                         && i.BillingYear == currentYear)
+                .Group(i => 1, g => new { Total = g.Sum(i => i.Amount) })
                 .FirstOrDefaultAsync();
 
-            dto.MonthlyRevenue = monthlyRevenue?["total"]?.AsDecimal128 is Decimal128 d
-                ? (decimal)d : 0m;
+            dto.MonthlyRevenue = monthlyRevenueResult?.Total ?? 0m;
 
-            // Hóa đơn chưa thanh toán
+            // Hóa đơn chưa thanh toán (bao gồm cả hóa đơn đã quá hạn, vì Overdue chỉ là trạng thái
+            // hiển thị được tính động, DB vẫn lưu là Unpaid)
             dto.UnpaidInvoices = (int)await _invoiceCollection
                 .CountDocumentsAsync(i => i.Status == InvoiceStatus.Unpaid);
 
-            // Doanh thu 6 tháng gần đây
+            // Doanh thu 6 tháng gần đây (theo kỳ hóa đơn)
             var sixMonthsAgo = new DateTime(currentYear, currentMonth, 1).AddMonths(-5);
 
             var revenueGroups = await _invoiceCollection.Aggregate()
-                .Match(i => i.Status == InvoiceStatus.Paid && i.DueDate >= sixMonthsAgo)
-                .Group(new BsonDocument
+                .Match(i => i.Status == InvoiceStatus.Paid)
+                .Group(i => new { i.BillingYear, i.BillingMonth }, g => new
                 {
-                    { "_id", new BsonDocument
-                        {
-                            { "year", new BsonDocument("$year", "$DueDate") },
-                            { "month", new BsonDocument("$month", "$DueDate") }
-                        }
-                    },
-                    { "total", new BsonDocument("$sum", "$Amount") }
+                    g.Key.BillingYear,
+                    g.Key.BillingMonth,
+                    Total = g.Sum(i => i.Amount)
                 })
                 .ToListAsync();
 
             var revenueDict = revenueGroups.ToDictionary(
-                g => (g["_id"]["year"].AsInt32, g["_id"]["month"].AsInt32),
-                g => g["total"].AsDecimal128);
+                g => (g.BillingYear, g.BillingMonth),
+                g => g.Total);
 
             dto.RevenueLast6Months = new List<RevenueChartDto>();
             for (int i = 5; i >= 0; i--)
@@ -91,7 +83,7 @@ namespace SmartBoardingHouse.Controllers
                 dto.RevenueLast6Months.Add(new RevenueChartDto
                 {
                     Month = $"T{date.Month}",
-                    Revenue = revenueDict.TryGetValue(key, out var total) ? (decimal)total : 0m
+                    Revenue = revenueDict.TryGetValue(key, out var total) ? total : 0m
                 });
             }
 
@@ -126,7 +118,7 @@ namespace SmartBoardingHouse.Controllers
 
         private static string GetTimeAgo(DateTime createdAt)
         {
-            var span = DateTime.Now - createdAt;
+            var span = DateTime.UtcNow - createdAt;
 
             if (span.TotalMinutes < 1) return "Vừa xong";
             if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} phút trước";

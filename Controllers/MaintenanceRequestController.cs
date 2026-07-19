@@ -168,7 +168,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (item is null)
-                return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
+                return NotFound(CommonMessage.NotFound("Yêu cầu sửa chữa"));
 
             if (item.Status != MaintenanceStatus.InProgress)
                 return BadRequest(CommonMessage.JustCompleteTheInProgressRequest());

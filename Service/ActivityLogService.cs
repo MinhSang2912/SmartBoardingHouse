@@ -27,7 +27,7 @@ namespace SmartBoardingHouse.Services
                 RoomNumber = roomNumber,
                 Description = description,
                 Amount = amount,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             await _collection.InsertOneAsync(log);

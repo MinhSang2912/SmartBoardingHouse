@@ -22,6 +22,28 @@ using System.Text;
 
 BsonSerializer.RegisterSerializer(new ObjectSerializer(ObjectSerializer.AllAllowedTypes));
 
+// Đăng ký serializer dùng chung cho toàn bộ enum trong hệ thống, để đọc/ghi đúng
+
+foreach (var enumType in new[]
+{
+    typeof(Enums.Role),
+    typeof(Enums.ContractStatus),
+    typeof(Enums.RoomStatus),
+    typeof(Enums.InvoiceStatus),
+    typeof(Enums.MaintenanceStatus),
+    typeof(Enums.PriotyRequest),
+    typeof(Enums.ActivityType),
+    typeof(Enums.MeterType),
+    typeof(Enums.MessageType),
+    typeof(Enums.MaintenanceCategory),
+    typeof(Enums.NotificationType),
+})
+{
+    var serializerType = typeof(LowerCaseStringEnumSerializer<>).MakeGenericType(enumType);
+    var serializer = (IBsonSerializer)Activator.CreateInstance(serializerType)!;
+    BsonSerializer.RegisterSerializer(enumType, serializer);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ====================== SERVICES ======================
@@ -95,7 +117,7 @@ builder.Services.AddSingleton<PhotoService>();
 // JwtService - tạo và xác thực JWT token
 builder.Services.AddSingleton<JwtService>();
 
-// NotificationService - tạo thông báo tự động
+// NotificationService - tạo thông báo (tay hoặc tự động) + lưu DB + đẩy realtime
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ====================== JWT AUTHENTICATION ======================
