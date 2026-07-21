@@ -52,6 +52,12 @@ namespace SmartBoardingHouse.Controllers
             if (!PasswordHelper.Verify(request.Password, user.Password))
                 return BadRequest(CommonMessage.LoginEmailOrPasswordIsWrong());
 
+            // Web quản lý này chỉ dành cho chủ nhà (Admin). Tenant đăng nhập qua
+            // app di động (backend Node.js riêng), không được vào đây.
+            if (!string.Equals(user.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    "Chỉ tài khoản quản trị (chủ nhà) mới được đăng nhập vào hệ thống này.");
+
             user.RefreshToken = _jwtService.GenerateRefreshToken();
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
             await _userCollection.ReplaceOneAsync(x => x.Id == user.Id, user);
@@ -196,7 +202,7 @@ namespace SmartBoardingHouse.Controllers
                 Name = user.Name,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                
+
                 RoomNumber = user.RoomNumber,
                 Token = _jwtService.GenerateToken(user)
             };

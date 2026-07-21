@@ -27,17 +27,17 @@ BsonSerializer.RegisterSerializer(new ObjectSerializer(ObjectSerializer.AllAllow
 // Xem chi tiết trong Common/LowerCaseStringEnumSerializer.cs
 foreach (var enumType in new[]
 {
-    typeof(SmartBoardingHouse.Common.Enums.Role),
-    typeof(SmartBoardingHouse.Common.Enums.ContractStatus),
-    typeof(SmartBoardingHouse.Common.Enums.RoomStatus),
-    typeof(SmartBoardingHouse.Common.Enums.InvoiceStatus),
-    typeof(SmartBoardingHouse.Common.Enums.MaintenanceStatus),
-    typeof(SmartBoardingHouse.Common.Enums.PriotyRequest),
-    typeof(SmartBoardingHouse.Common.Enums.ActivityType),
-    typeof(SmartBoardingHouse.Common.Enums.MeterType),
-    typeof(SmartBoardingHouse.Common.Enums.MessageType),
-    typeof(SmartBoardingHouse.Common.Enums.MaintenanceCategory),
-    typeof(SmartBoardingHouse.Common.Enums.NotificationType),
+    typeof(Enums.Role),
+    typeof(Enums.ContractStatus),
+    typeof(Enums.RoomStatus),
+    typeof(Enums.InvoiceStatus),
+    typeof(Enums.MaintenanceStatus),
+    typeof(Enums.PriotyRequest),
+    typeof(Enums.ActivityType),
+    typeof(Enums.MeterType),
+    typeof(Enums.MessageType),
+    typeof(Enums.MaintenanceCategory),
+    typeof(Enums.NotificationType),
 })
 {
     var serializerType = typeof(LowerCaseStringEnumSerializer<>).MakeGenericType(enumType);
