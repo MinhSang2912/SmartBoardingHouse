@@ -27,18 +27,18 @@ namespace SmartBoardingHouse.Service
     {
         private readonly IMongoCollection<Notification> _notificationCollection;
         private readonly IMapper _mapper;
-        private readonly ChatService _chatService;
+        //private readonly ChatService _chatService;
         private readonly ILogger<NotificationService> _logger;
 
         public NotificationService(
             IMongoDatabase database,
             IMapper mapper,
-            ChatService chatService,
+            //ChatService chatService,
             ILogger<NotificationService> logger)
         {
             _notificationCollection = database.GetCollection<Notification>("notifications");
             _mapper = mapper;
-            _chatService = chatService;
+            //_chatService = chatService;
             _logger = logger;
         }
 
@@ -90,16 +90,16 @@ namespace SmartBoardingHouse.Service
                 return null;
             }
 
-            try
-            {
-                await _chatService.PushNotificationAsync(response, tenantId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Đã lưu thông báo nhưng không đẩy realtime được. TenantId={TenantId}, NotificationId={Id}",
-                    tenantId, notification.Id);
-            }
+            //try
+            //{
+            //    await _chatService.PushNotificationAsync(response, tenantId);
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogWarning(ex,
+            //        "Đã lưu thông báo nhưng không đẩy realtime được. TenantId={TenantId}, NotificationId={Id}",
+            //        tenantId, notification.Id);
+            //}
 
             return response;
         }

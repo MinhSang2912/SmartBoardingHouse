@@ -23,20 +23,21 @@ using System.Text;
 BsonSerializer.RegisterSerializer(new ObjectSerializer(ObjectSerializer.AllAllowedTypes));
 
 // Đăng ký serializer dùng chung cho toàn bộ enum trong hệ thống, để đọc/ghi đúng
-
+// định dạng chuỗi thường mà backend Node.js/Mongoose (dùng chung DB) đang lưu.
+// Xem chi tiết trong Common/LowerCaseStringEnumSerializer.cs
 foreach (var enumType in new[]
 {
-    typeof(Enums.Role),
-    typeof(Enums.ContractStatus),
-    typeof(Enums.RoomStatus),
-    typeof(Enums.InvoiceStatus),
-    typeof(Enums.MaintenanceStatus),
-    typeof(Enums.PriotyRequest),
-    typeof(Enums.ActivityType),
-    typeof(Enums.MeterType),
-    typeof(Enums.MessageType),
-    typeof(Enums.MaintenanceCategory),
-    typeof(Enums.NotificationType),
+    typeof(SmartBoardingHouse.Common.Enums.Role),
+    typeof(SmartBoardingHouse.Common.Enums.ContractStatus),
+    typeof(SmartBoardingHouse.Common.Enums.RoomStatus),
+    typeof(SmartBoardingHouse.Common.Enums.InvoiceStatus),
+    typeof(SmartBoardingHouse.Common.Enums.MaintenanceStatus),
+    typeof(SmartBoardingHouse.Common.Enums.PriotyRequest),
+    typeof(SmartBoardingHouse.Common.Enums.ActivityType),
+    typeof(SmartBoardingHouse.Common.Enums.MeterType),
+    typeof(SmartBoardingHouse.Common.Enums.MessageType),
+    typeof(SmartBoardingHouse.Common.Enums.MaintenanceCategory),
+    typeof(SmartBoardingHouse.Common.Enums.NotificationType),
 })
 {
     var serializerType = typeof(LowerCaseStringEnumSerializer<>).MakeGenericType(enumType);
@@ -45,6 +46,12 @@ foreach (var enumType in new[]
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Render (và hầu hết các nền tảng hosting dạng container) cấp port động qua biến
+// môi trường PORT, container phải lắng nghe đúng cổng này trên 0.0.0.0 thì mới
+// nhận được traffic. Local dev không có biến PORT nên fallback về 8080.
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // ====================== SERVICES ======================
 builder.Services.AddEndpointsApiExplorer();
@@ -57,7 +64,7 @@ builder.Services.AddControllers()
 
 // Đăng ký SignalR
 builder.Services.AddSignalR();
-builder.Services.AddHttpClient<ChatService>();
+//builder.Services.AddHttpClient<ChatService>();
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();
@@ -154,15 +161,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 // ====================== CORS ======================
+// Đọc danh sách origin được phép từ config (appsettings.json key "AllowedOrigins",
+// hoặc env var "AllowedOrigins__0", "AllowedOrigins__1",... trên Render).
+// Local dev không set thì fallback về localhost:5173 (Vite) như cũ.
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:5173" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials(); 
+                  .AllowCredentials();
         });
 });
 
@@ -233,7 +246,14 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images"
 });
 
-app.UseHttpsRedirection();
+// Render (và các platform tương tự) đã xử lý HTTPS ở tầng proxy/edge, container
+// bên trong chỉ nhận HTTP thuần. Nếu vẫn bật UseHttpsRedirection ở production,
+// middleware sẽ cố redirect sang cổng HTTPS không tồn tại trong container -> lỗi.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("AllowReact");
 
 // Authentication phải trước Authorization
@@ -241,7 +261,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // ====================== ROUTES ======================
+app.MapGet("/", () => Results.Ok(new { status = "ok", service = "SmartBoardingHouse API" }));
 app.MapControllers();
-app.MapHub<ChatHub>("/hubs/chat");
+//app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
