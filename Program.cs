@@ -43,20 +43,23 @@ foreach (var enumType in new[]
     BsonSerializer.RegisterSerializer(enumType, serializer);
 }
 
-// Dùng CreateEmptyBuilder để không tạo FileSystemWatcher (tránh lỗi inotify trên Render)
+// Dùng CreateEmptyBuilder để tránh lỗi inotify
 var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions
 {
     Args = args
 });
 
-// Thêm configuration thủ công, tắt reloadOnChange
+// Configuration (tắt reloadOnChange)
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
     .AddEnvironmentVariables()
     .AddCommandLine(args);
 
-// Lắng nghe port từ biến môi trường PORT (Render), fallback 8080 khi chạy local
+// Bắt buộc khi dùng CreateEmptyBuilder
+builder.WebHost.UseKestrel();
+
+// Port cho Render
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
@@ -249,5 +252,6 @@ app.UseAuthorization();
 // ====================== ROUTES ======================
 app.MapGet("/", () => Results.Ok(new { status = "ok", service = "SmartBoardingHouse API" }));
 app.MapControllers();
+//app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
