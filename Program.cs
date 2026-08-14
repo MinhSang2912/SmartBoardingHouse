@@ -22,8 +22,7 @@ using System.Text;
 
 BsonSerializer.RegisterSerializer(new ObjectSerializer(ObjectSerializer.AllAllowedTypes));
 
-// Đăng ký serializer dùng chung cho toàn bộ enum trong hệ thống, để đọc/ghi đúng
-
+// Đăng ký serializer dùng chung cho toàn bộ enum trong hệ thống
 foreach (var enumType in new[]
 {
     typeof(Enums.Role),
@@ -46,12 +45,17 @@ foreach (var enumType in new[]
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Tắt reloadOnChange để tránh lỗi inotify trên Render
 builder.Configuration.Sources.Clear();
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
     .AddEnvironmentVariables()
     .AddCommandLine(args);
+
+// Lắng nghe port từ biến môi trường PORT (Render), fallback 8080 khi chạy local
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // ====================== SERVICES ======================
 builder.Services.AddEndpointsApiExplorer();
@@ -61,12 +65,10 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new ObjectToInferredTypesConverter());
     });
 
-// Đăng ký SignalR
 builder.Services.AddSignalR();
 
 // ====================== MONGODB ======================
 builder.Services.AddSingleton<MongoDbService>();
-// Đăng ký IMongoDatabase để các Controller có thể inject
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
 {
     var mongoService = sp.GetRequiredService<MongoDbService>();
@@ -76,8 +78,6 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 // ====================== ADMIN SETTINGS ======================
 builder.Services.Configure<AdminSettings>(
     builder.Configuration.GetSection("AdminAccount"));
-
-
 
 // ====================== VALIDATORS ======================
 builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidation>();
@@ -108,7 +108,6 @@ var mapperConfig = new MapperConfiguration(cfg =>
 builder.Services.AddSingleton(mapperConfig.CreateMapper());
 
 // ====================== CUSTOM SERVICES ======================
-// ActivityLogService - ghi lịch sử hoạt động
 builder.Services.AddScoped<ActivityLogService>(sp =>
 {
     var mongoService = sp.GetRequiredService<MongoDbService>();
@@ -116,13 +115,8 @@ builder.Services.AddScoped<ActivityLogService>(sp =>
     return new ActivityLogService(collection);
 });
 
-// PhotoService - lưu ảnh công tơ vào thư mục Images
 builder.Services.AddSingleton<PhotoService>();
-
-// JwtService - tạo và xác thực JWT token
 builder.Services.AddSingleton<JwtService>();
-
-// NotificationService - tạo thông báo (tay hoặc tự động) + lưu DB + đẩy realtime
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ====================== JWT AUTHENTICATION ======================
@@ -159,12 +153,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 // ====================== CORS ======================
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:5173" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
@@ -180,7 +177,6 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
-    // Hỗ trợ Bearer token trong Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -227,7 +223,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Serve ảnh từ thư mục Images (truy cập qua /images/ten-file.jpg)
+// Serve ảnh từ thư mục Images
 var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "Images");
 if (!Directory.Exists(imagesPath))
     Directory.CreateDirectory(imagesPath);
@@ -238,14 +234,17 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images"
 });
 
-app.UseHttpsRedirection();
-app.UseCors("AllowReact");
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
-// Authentication phải trước Authorization
+app.UseCors("AllowReact");
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ====================== ROUTES ======================
+app.MapGet("/", () => Results.Ok(new { status = "ok", service = "SmartBoardingHouse API" }));
 app.MapControllers();
 
 app.Run();
