@@ -240,6 +240,37 @@ namespace SmartBoardingHouse.Controllers
         //    return Ok(MapToResponse(updated, null, null));
         //}
 
+        // PUT: api/MaintenanceRequests/{id}/note
+        [HttpPut("{id}/note")]
+        public async Task<ActionResult<MaintenanceRequestResponse>> AddNote(
+            string id,
+            [FromBody] string note)
+        {
+            var item = await _collection
+                .Find(x => x.Id == id)
+                .FirstOrDefaultAsync();
+
+            if (item is null)
+                return NotFound(
+                    CommonMessage.NotFound("Yêu cầu sửa chữa"));
+
+            if (string.IsNullOrWhiteSpace(note))
+                return BadRequest("Nội dung ghi chú không được để trống.");
+
+            var now = DateTime.UtcNow;
+
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<MaintenanceRequest>.Update
+                    .Set(x => x.AdminNote, note.Trim())
+                    .Set(x => x.UpdatedAt, now));
+
+            item.AdminNote = note.Trim();
+            item.UpdatedAt = now;
+
+            return Ok(MapToResponse(item, null, null));
+        }
+
         // PUT: api/MaintenanceRequests/{id}/start
         [HttpPut("{id}/start")]
         public async Task<ActionResult<MaintenanceRequestResponse>> Start(string id)
