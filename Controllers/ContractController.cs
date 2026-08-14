@@ -1,16 +1,16 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
-using SmartBoardingHouse.Services;
 using SmartBoardingHouse.Service;
+using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
-using Microsoft.AspNetCore.Authorization;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -36,8 +36,8 @@ namespace SmartBoardingHouse.Controllers
         {
             var db = mongoService.GetDatabase();
             _contractCollection = db.GetCollection<Contract>("contracts");
-            _userCollection = db.GetCollection<User>("users");
             _roomCollection = db.GetCollection<Room>("rooms");
+            _userCollection = db.GetCollection<User>("users");
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
@@ -49,7 +49,14 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<List<ContractResponse>>> GetAll()
         {
             var contracts = await _contractCollection.Find(_ => true).ToListAsync();
-            return Ok(contracts.Select(MapToResponse).ToList());
+            var result = new List<ContractResponse>();
+
+            foreach (var contract in contracts)
+            {
+                result.Add(await MapToResponseAsync(contract));
+            }
+
+            return Ok(result);
         }
 
         // GET: api/Contracts/{id}
@@ -60,7 +67,7 @@ namespace SmartBoardingHouse.Controllers
             if (contract is null)
                 return NotFound(CommonMessage.NotFound("Hợp đồng"));
 
-            return Ok(MapToResponse(contract));
+            return Ok(await MapToResponseAsync(contract));
         }
 
         // POST: api/Contracts
@@ -69,129 +76,89 @@ namespace SmartBoardingHouse.Controllers
         {
             var errors = await ValidateRequest(request);
 
-            // Số hợp đồng tồn tại 
+            // Kiểm tra số hợp đồng trùng
             var contractExists = await _contractCollection
                 .Find(x => x.ContractNumber == request.ContractNumber)
                 .AnyAsync();
             if (contractExists)
                 return BadRequest(CommonMessage.ContractNumberExists(request.ContractNumber));
 
-            // Tìm xem có số phòng không
-            var roomExists = await _roomCollection
+            // Tìm phòng theo RoomNumber
+            var room = await _roomCollection
                 .Find(x => x.RoomNumber == request.RoomNumber)
                 .FirstOrDefaultAsync();
-            if (roomExists is null)
+            if (room is null)
                 return BadRequest(CommonMessage.NotFound("Phòng"));
 
-            //Phòng đã có hợp đồng đang hiệu lực
-            if (roomExists is not null)
-            {
-                var activeContractExists = await _contractCollection
-                    .Find(x => x.RoomNumber == request.RoomNumber
-                             && x.Status == ContractStatus.Active)
-                    .AnyAsync();
-                if (activeContractExists)
-                    errors.Add(CommonMessage.ContractRoomIsExists());
-            }
+            // Phòng đã có hợp đồng đang hiệu lực
+            var activeContractForRoom = await _contractCollection
+                .Find(x => x.RoomId == room.Id && x.Status == ContractStatus.Active)
+                .AnyAsync();
+            if (activeContractForRoom)
+                errors.Add(CommonMessage.ContractRoomIsExists());
 
-            // Tìm xem có người thuê đó không
-            var userExists = await _userCollection
+            // Tìm người thuê theo tên
+            var tenant = await _userCollection
                 .Find(x => x.Name == request.TenantName)
                 .FirstOrDefaultAsync();
-
-            if (userExists is null)
+            if (tenant is null)
                 return BadRequest(CommonMessage.NotFound("Người thuê"));
 
             // Người thuê đã có hợp đồng đang hiệu lực
-            if (userExists is not null)
-                {
-                var activeContractExistsForTenant = await _contractCollection
-                    .Find(x => x.TenantName == request.TenantName
-                             && x.Status == ContractStatus.Active)
-                    .AnyAsync();
-                if (activeContractExistsForTenant)
-                    return BadRequest(CommonMessage.ContractTenantIsExists());
-            }
+            var activeContractForTenant = await _contractCollection
+                .Find(x => x.TenantId == tenant.Id && x.Status == ContractStatus.Active)
+                .AnyAsync();
+            if (activeContractForTenant)
+                return BadRequest(CommonMessage.ContractTenantIsExists());
 
-            if (roomExists is null || userExists is null)
-            {
-                return BadRequest(CommonMessage.NotFound("Phòng hoặc Người thuê"));
-            }    
+            if (errors.Any())
+                return BadRequest(errors);
+
             var contract = _mapper.Map<Contract>(request);
-            contract.CreatedAt = DateTime.Now;
+            contract.CreatedAt = DateTime.UtcNow;
             contract.Status = ContractStatus.Active;
-            contract.SignedDate = DateTime.Now;
-            contract.RoomId = roomExists.Id;
-            contract.TenantId = userExists.Id;
-            contract.RoomDeposit = roomExists.RoomDeposit;
+            contract.SignedDate = DateTime.UtcNow;
+            contract.RoomId = room.Id;
+            contract.TenantId = tenant.Id;
+            contract.RoomNumber = room.RoomNumber;
+            contract.TenantName = tenant.Name;
+            contract.RoomDeposit = room.RoomDeposit;
 
             await _contractCollection.InsertOneAsync(contract);
 
+            // Cập nhật Room
             await _roomCollection.UpdateOneAsync(
-                x => x.RoomNumber == request.RoomNumber,
+                x => x.Id == room.Id,
                 Builders<Room>.Update
                     .Set(x => x.Status, RoomStatus.Occupied)
-                    .Set(x => x.TenantId, userExists.Id)
+                    .Set(x => x.TenantId, tenant.Id)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
+            // Cập nhật User
             await _userCollection.UpdateOneAsync(
-                x => x.Name == request.TenantName,
+                x => x.Id == tenant.Id,
                 Builders<User>.Update
-                    .Set(x => x.RoomNumber, request.RoomNumber)
-                    .Set(x => x.RoomId, roomExists.Id)
+                    .Set(x => x.RoomId, room.Id)
+                    .Set(x => x.RoomNumber, room.RoomNumber)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
             await _activityLogService.LogAsync(
                 type: ActivityType.CheckIn,
-                userName: contract.TenantName,
-                roomNumber: contract.RoomNumber,
-                description: $"Phòng {contract.RoomNumber} được {contract.TenantName} thuê vào {DateTime.Now:dd/MM/yyyy}" );
+                userName: tenant.Name,
+                roomNumber: room.RoomNumber,
+                description: $"Phòng {room.RoomNumber} được {tenant.Name} thuê vào {DateTime.Now:dd/MM/yyyy}");
 
             await _notificationService.CreateAsync(
-                tenantId: contract.TenantId,
+                tenantId: tenant.Id,
                 title: "Hợp đồng mới đã được tạo",
-                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được tạo thành công, phòng đã được thuê bởi {contract.TenantName}",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {room.RoomNumber} đã được tạo thành công.",
                 type: NotificationType.Contract,
                 refId: contract.Id,
                 refModel: "Contract");
 
             return CreatedAtAction(nameof(GetById), new { id = contract.Id },
-                MapToResponse(contract));
+                await MapToResponseAsync(contract));
         }
-
-        // PUT: api/Contracts/{id}
-        //[HttpPut("{id}")]
-        //public async Task<ActionResult<ContractResponse>> Update(int id, ContractRequest request)
-        //{
-        //    var errors = await ValidateRequest(request);
-
-        //    var existingContract = await _contractCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
-        //    if (existingContract is null)
-        //        return NotFound(CommonMessage.NotFound("Contract"));
-
-        //    var contractExists = await _contractCollection
-        //        .Find(x => x.ContractNumber == request.ContractNumber && x.Id != id)
-        //        .AnyAsync();
-        //    if (contractExists)
-        //        errors.Add(CommonMessage.ContractNumberExists(request.ContractNumber));
-
-        //    var roomExists = await _roomCollection
-        //        .Find(x => x.RoomNumber == request.RoomNumber)
-        //        .AnyAsync();
-        //    if (!roomExists)
-        //        errors.Add(CommonMessage.NotFound("Room"));
-
-        //    if (errors.Any())
-        //        return BadRequest(errors);
-
-        //    var updatedContract = _mapper.Map<Contract>(request);
-        //    updatedContract.Id = id;
-        //    updatedContract.CreatedAt = existingContract.CreatedAt;
-        //    updatedContract.UpdatedAt = DateTime.UtcNow;
-
-        //    await _contractCollection.ReplaceOneAsync(x => x.Id == id, updatedContract);
-        //    return Ok(MapToResponse(updatedContract));
-        //}
 
         // PUT: api/Contracts/{id}/terminate
         [HttpPut("{id}/terminate")]
@@ -210,18 +177,27 @@ namespace SmartBoardingHouse.Controllers
                     .Set(x => x.Status, ContractStatus.Terminated)
                     .Set(x => x.UpdatedAt, DateTime.UtcNow));
 
-            await _roomCollection.UpdateOneAsync(
-                x => x.RoomNumber == contract.RoomNumber,
-                Builders<Room>.Update
-                    .Set(x => x.Status, RoomStatus.Available)
-                    .Set(x => x.TenantId, null)
-                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
-            await _userCollection.UpdateOneAsync(
-                x => x.Name == contract.TenantName,
-                Builders<User>.Update
-                    .Set(x => x.RoomNumber, "Chưa có phòng")
-                    .Set(x => x.RoomId, null)
-                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
+            // Cập nhật Room theo RoomId
+            if (!string.IsNullOrEmpty(contract.RoomId))
+            {
+                await _roomCollection.UpdateOneAsync(
+                    x => x.Id == contract.RoomId,
+                    Builders<Room>.Update
+                        .Set(x => x.Status, RoomStatus.Available)
+                        .Set(x => x.TenantId, null)
+                        .Set(x => x.UpdatedAt, DateTime.UtcNow));
+            }
+
+            // Cập nhật User theo TenantId
+            if (!string.IsNullOrEmpty(contract.TenantId))
+            {
+                await _userCollection.UpdateOneAsync(
+                    x => x.Id == contract.TenantId,
+                    Builders<User>.Update
+                        .Set(x => x.RoomId, null)
+                        .Set(x => x.RoomNumber, "Chưa có phòng")
+                        .Set(x => x.UpdatedAt, DateTime.UtcNow));
+            }
 
             await _activityLogService.LogAsync(
                 type: ActivityType.CheckOut,
@@ -232,12 +208,13 @@ namespace SmartBoardingHouse.Controllers
             await _notificationService.CreateAsync(
                 tenantId: contract.TenantId,
                 title: "Hợp đồng đã chấm dứt",
-                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt, người thuê {contract.TenantName} đã trả phòng",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt.",
                 type: NotificationType.Contract,
                 refId: contract.Id,
                 refModel: "Contract");
 
-            return Ok(MapToResponse(contract));
+            contract.Status = ContractStatus.Terminated;
+            return Ok(await MapToResponseAsync(contract));
         }
 
         // PUT: api/Contracts/{id}/extend
@@ -249,10 +226,7 @@ namespace SmartBoardingHouse.Controllers
                 return NotFound(CommonMessage.NotFound("Hợp đồng"));
 
             if (newEndDate <= contract.EndDate)
-                return BadRequest("Ngày kết thúc mới phải sau ngày kết thúc hiện tại.");
-
-            if (contract.Status != ContractStatus.Active)
-                return BadRequest(CommonMessage.ContractStatusIsInvalid());
+                return BadRequest("Ngày kết thúc mới phải lớn hơn ngày kết thúc hiện tại");
 
             await _contractCollection.UpdateOneAsync(
                 x => x.Id == id,
@@ -272,29 +246,8 @@ namespace SmartBoardingHouse.Controllers
                 refId: contract.Id,
                 refModel: "Contract");
 
-            return Ok(MapToResponse(contract));
+            return Ok(await MapToResponseAsync(contract));
         }
-
-        // DELETE: api/Contracts/{id}
-        //[HttpDelete("{id}")]
-        //public async Task<IActionResult> Delete(int id)
-        //{
-        //    var contract = await _contractCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
-        //    if (contract is null)
-        //        return NotFound(CommonMessage.NotFound("Contract"));
-
-        //    await _contractCollection.DeleteOneAsync(x => x.Id == id);
-        //    if (contract.Status == ContractStatus.Active)
-        //    {
-        //        await _roomCollection.UpdateOneAsync(
-        //            x => x.RoomNumber == contract.RoomNumber,
-        //            Builders<Room>.Update
-        //                .Set(x => x.Status, RoomStatus.Available)
-        //                .Set(x => x.UpdatedAt, DateTime.UtcNow));
-        //    }
-
-        //    return Ok(CommonMessage.Deleted("Contract"));
-        //}
 
         // ==================== HELPERS ====================
 
@@ -304,9 +257,31 @@ namespace SmartBoardingHouse.Controllers
             return result.Errors.Select(e => e.ErrorMessage).ToList();
         }
 
-        private ContractResponse MapToResponse(Contract contract)
+        private async Task<ContractResponse> MapToResponseAsync(Contract contract)
         {
             var response = _mapper.Map<ContractResponse>(contract);
+
+            // Lấy Room theo RoomId
+            if (!string.IsNullOrEmpty(contract.RoomId))
+            {
+                var room = await _roomCollection
+                    .Find(r => r.Id == contract.RoomId)
+                    .FirstOrDefaultAsync();
+
+                if (room != null)
+                    response.RoomNumber = room.RoomNumber;
+            }
+
+            // Lấy Tenant theo TenantId
+            if (!string.IsNullOrEmpty(contract.TenantId))
+            {
+                var tenant = await _userCollection
+                    .Find(u => u.Id == contract.TenantId)
+                    .FirstOrDefaultAsync();
+
+                if (tenant != null)
+                    response.TenantName = tenant.Name;
+            }
 
             response.StatusLabel = contract.Status switch
             {

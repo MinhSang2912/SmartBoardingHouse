@@ -36,27 +36,27 @@ namespace SmartBoardingHouse.Controllers
         /// <summary>
         /// Tạo thông báo mới (thủ công, do Admin gửi)
         /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> CreateNotification([FromBody] NotificationRequest request)
-        {
-            var validationResult = await _validator.ValidateAsync(request);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors);
+        //[HttpPost]
+        //public async Task<IActionResult> CreateNotification([FromBody] NotificationRequest request)
+        //{
+        //    var validationResult = await _validator.ValidateAsync(request);
+        //    if (!validationResult.IsValid)
+        //        return BadRequest(validationResult.Errors);
 
-            var response = await _notificationService.CreateAsync(
-                tenantId: request.TenantId,
-                title: request.Title,
-                body: request.Body,
-                type: request.Type,
-                refId: request.RefId,
-                refModel: request.RefModel,
-                meta: request.Meta);
+        //    var response = await _notificationService.CreateAsync(
+        //        tenantId: request.TenantId,
+        //        title: request.Title,
+        //        body: request.Body,
+        //        type: request.Type,
+        //        refId: request.RefId,
+        //        refModel: request.RefModel,
+        //        meta: request.Meta);
 
-            if (response is null)
-                return StatusCode(500, new { message = "Không thể tạo thông báo, vui lòng thử lại" });
+        //    if (response is null)
+        //        return StatusCode(500, new { message = "Không thể tạo thông báo, vui lòng thử lại" });
 
-            return Ok(response);
-        }
+        //    return Ok(response);
+        //}
 
         /// <summary>
         /// Lấy danh sách thông báo của Tenant hiện tại

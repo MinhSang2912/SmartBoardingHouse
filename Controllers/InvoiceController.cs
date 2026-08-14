@@ -253,6 +253,11 @@ namespace SmartBoardingHouse.Controllers
             };
             response.BillingPeriod = "Tháng " + invoice.BillingMonth + "/" + invoice.BillingYear;
 
+            var room = await _roomCollection
+                .Find(x => x.Id == invoice.RoomId)
+                .FirstOrDefaultAsync();
+            response.RoomNumber = room?.RoomNumber ?? "Không tìm thấy";
+
             var tenant = await _userCollection
                 .Find(x => x.Id == invoice.TenantId)
                 .FirstOrDefaultAsync();

@@ -21,6 +21,7 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<Room> _collection;
         private readonly IMongoCollection<Floor> _floorCollection;
         private readonly IMongoCollection<Contract> _contractCollection;
+        private readonly IMongoCollection<User> _userCollection;
         private readonly IValidator<RoomRequest> _validator;
         private readonly IMapper _mapper;
 
@@ -33,6 +34,7 @@ namespace SmartBoardingHouse.Controllers
             _collection = db.GetCollection<Room>("rooms");
             _floorCollection = db.GetCollection<Floor>("floors");
             _contractCollection = db.GetCollection<Contract>("contracts");
+            _userCollection = db.GetCollection<User>("users");
             _validator = validator;
             _mapper = mapper;
         }
@@ -42,12 +44,13 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<List<RoomResponse>>> GetAll()
         {
             var rooms = await _collection.Find(_ => true).ToListAsync();
-            var floors = await _floorCollection.Find(_ => true).ToListAsync();
-            var activeContracts = await _contractCollection
-                .Find(c => c.Status == ContractStatus.Active)
-                .ToListAsync();
+            var result = new List<RoomResponse>();
 
-            var result = rooms.Select(r => MapToResponse(r, floors, activeContracts)).ToList();
+            foreach (var room in rooms)
+            {
+                result.Add(await MapToResponseAsync(room));
+            }
+
             return Ok(result);
         }
 
@@ -59,23 +62,11 @@ namespace SmartBoardingHouse.Controllers
             if (room is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
-            var floors = await _floorCollection.Find(_ => true).ToListAsync();
-            var activeContracts = await _contractCollection
-                .Find(c => c.Status == ContractStatus.Active)
-                .ToListAsync();
-            try
-            {
-                var response = MapToResponse(room, floors, activeContracts);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Lỗi khi xử lý dữ liệu: {ex.Message}");
-            }
+            return Ok(await MapToResponseAsync(room));
         }
 
         // POST: api/Rooms
-        [HttpPost]      
+        [HttpPost]
         public async Task<ActionResult<RoomResponse>> Create(RoomRequest request)
         {
             var errors = await ValidateRequest(request);
@@ -100,59 +91,41 @@ namespace SmartBoardingHouse.Controllers
 
             await _collection.InsertOneAsync(room);
 
-            var floors = await _floorCollection.Find(_ => true).ToListAsync();
-
             return CreatedAtAction(nameof(GetById), new { id = room.Id },
-                MapToResponse(room, floors, new List<Contract>()));
+                await MapToResponseAsync(room));
         }
 
         // PUT: api/Rooms/{id}
         [HttpPut("{id}")]
         public async Task<ActionResult<RoomResponse>> Update(string id, RoomRequest request)
         {
-            // Validate request
             var errors = await ValidateRequest(request);
 
-            // Kiểm tra phòng tồn tại
             var existingRoom = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (existingRoom is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
-            // Kiểm tra RoomNumber đã tồn tại chưa (trừ phòng hiện tại)
             var roomNumberExists = await _collection
                 .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id)
                 .AnyAsync();
-
             if (roomNumberExists)
                 errors.Add(CommonMessage.RoomNumberExists());
 
-            // Kiểm tra Floor tồn tại
             var floor = await _floorCollection
                 .Find(x => x.Id == request.FloorId)
                 .FirstOrDefaultAsync();
-
             if (floor is null)
                 errors.Add(CommonMessage.NotFound("Tầng"));
 
-            // Nếu có lỗi thì return ngay
             if (errors.Any())
                 return BadRequest(errors);
 
-            // Map dữ liệu 
-            _mapper.Map(request, existingRoom);     
-
+            _mapper.Map(request, existingRoom);
             existingRoom.UpdatedAt = DateTime.UtcNow;
 
-            // Cập nhật vào database
             await _collection.ReplaceOneAsync(x => x.Id == id, existingRoom);
 
-            // Lấy dữ liệu bổ sung và trả về
-            var floors = await _floorCollection.Find(_ => true).ToListAsync();
-            var activeContracts = await _contractCollection
-                .Find(c => c.Status == ContractStatus.Active)
-                .ToListAsync();
-
-            return Ok(MapToResponse(existingRoom, floors, activeContracts));
+            return Ok(await MapToResponseAsync(existingRoom));
         }
 
         // DELETE: api/Rooms/{id}
@@ -162,14 +135,16 @@ namespace SmartBoardingHouse.Controllers
             var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (room is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
+
+            // Kiểm tra hợp đồng đang hiệu lực theo RoomId (chính xác hơn RoomNumber)
             var activeContractExists = await _contractCollection
-                .Find(c => c.RoomNumber == room.RoomNumber && c.Status == ContractStatus.Active)
+                .Find(c => c.RoomId == id && c.Status == ContractStatus.Active)
                 .AnyAsync();
+
             if (activeContractExists)
                 return BadRequest(CommonMessage.RoomHasActiveContract());
 
             await _collection.DeleteOneAsync(x => x.Id == id);
-
             return Ok(CommonMessage.Deleted("Phòng"));
         }
 
@@ -181,12 +156,18 @@ namespace SmartBoardingHouse.Controllers
             return validationResult.Errors.Select(e => e.ErrorMessage).ToList();
         }
 
-        private RoomResponse MapToResponse(Room room, List<Floor> floors, List<Contract> activeContracts)
+        private async Task<RoomResponse> MapToResponseAsync(Room room)
         {
             var response = _mapper.Map<RoomResponse>(room);
 
-            var floor = floors.FirstOrDefault(f => f.Id == room.FloorId);
-            response.FloorNumber = floor is not null ? floor.FloorNumber : 0;
+            // Lấy Floor theo Id
+            if (!string.IsNullOrEmpty(room.FloorId))
+            {
+                var floor = await _floorCollection
+                    .Find(f => f.Id == room.FloorId)
+                    .FirstOrDefaultAsync();
+                response.FloorNumber = floor?.FloorNumber ?? 0;
+            }
 
             response.StatusLabel = room.Status switch
             {
@@ -196,9 +177,28 @@ namespace SmartBoardingHouse.Controllers
                 _ => room.Status.ToString()
             };
 
-            // Contract liên kết với Room qua RoomNumber
-            var contract = activeContracts.FirstOrDefault(c => c.RoomNumber == room.RoomNumber);
-            response.TenantName = contract?.TenantName;
+            // Lấy Tenant theo TenantId (ưu tiên) hoặc qua hợp đồng active
+            if (!string.IsNullOrEmpty(room.TenantId))
+            {
+                var tenant = await _userCollection
+                    .Find(u => u.Id == room.TenantId)
+                    .FirstOrDefaultAsync();
+                response.TenantName = tenant?.Name;
+            }
+            else
+            {
+                var activeContract = await _contractCollection
+                    .Find(c => c.RoomId == room.Id && c.Status == ContractStatus.Active)
+                    .FirstOrDefaultAsync();
+
+                if (activeContract != null && !string.IsNullOrEmpty(activeContract.TenantId))
+                {
+                    var tenant = await _userCollection
+                        .Find(u => u.Id == activeContract.TenantId)
+                        .FirstOrDefaultAsync();
+                    response.TenantName = tenant?.Name ?? activeContract.TenantName;
+                }
+            }
 
             return response;
         }
