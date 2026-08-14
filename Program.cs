@@ -117,7 +117,7 @@ builder.Services.AddSingleton(mapperConfig.CreateMapper());
 builder.Services.AddScoped<ActivityLogService>(sp =>
 {
     var mongoService = sp.GetRequiredService<MongoDbService>();
-    var collection = mongoService.GetDatabase().GetCollection<ActivityLog>("ActivityLogs");
+    var collection = mongoService.GetDatabase().GetCollection<ActivityLog>("activityLogs");
     return new ActivityLogService(collection);
 });
 
