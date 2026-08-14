@@ -2,14 +2,14 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
+using CommonMessage = SmartBoardingHouse.Common.Message;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
-using SmartBoardingHouse.Service;
 using SmartBoardingHouse.Services;
+using SmartBoardingHouse.Service;
 using static SmartBoardingHouse.Common.Enums;
-using CommonMessage = SmartBoardingHouse.Common.Message;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -33,9 +33,11 @@ namespace SmartBoardingHouse.Controllers
             INotificationService notificationService)
         {
             var db = mongoService.GetDatabase();
+
             _collection = db.GetCollection<MaintenanceRequest>("maintenancerequests");
             _roomCollection = db.GetCollection<Room>("rooms");
             _userCollection = db.GetCollection<User>("users");
+
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
@@ -51,17 +53,72 @@ namespace SmartBoardingHouse.Controllers
                 .SortByDescending(x => x.CreatedAt)
                 .ToListAsync();
 
-            var mapped = new List<MaintenanceRequestResponse>();
-            foreach (var item in items)
+            if (items.Count == 0)
             {
-                mapped.Add(await MapToResponseAsync(item));
+                return Ok(new MaintenanceSummaryResponse
+                {
+                    Total = 0,
+                    Pending = 0,
+                    InProgress = 0,
+                    Completed = 0,
+                    Items = new List<MaintenanceRequestResponse>()
+                });
             }
+
+            var roomIds = items
+                .Where(x => !string.IsNullOrEmpty(x.RoomId))
+                .Select(x => x.RoomId)
+                .Distinct()
+                .ToList();
+
+            var tenantIds = items
+                .Where(x => !string.IsNullOrEmpty(x.TenantId))
+                .Select(x => x.TenantId)
+                .Distinct()
+                .ToList();
+
+            var roomsTask = roomIds.Count > 0
+                ? _roomCollection
+                    .Find(x => roomIds.Contains(x.Id))
+                    .ToListAsync()
+                : Task.FromResult(new List<Room>());
+
+            var tenantsTask = tenantIds.Count > 0
+                ? _userCollection
+                    .Find(x => tenantIds.Contains(x.Id))
+                    .ToListAsync()
+                : Task.FromResult(new List<User>());
+
+            await Task.WhenAll(roomsTask, tenantsTask);
+
+            var rooms = roomsTask.Result;
+            var tenants = tenantsTask.Result;
+
+            var roomDict = rooms
+                .Where(x => !string.IsNullOrEmpty(x.Id))
+                .GroupBy(x => x.Id)
+                .ToDictionary(x => x.Key, x => x.First());
+
+            var tenantDict = tenants
+                .Where(x => !string.IsNullOrEmpty(x.Id))
+                .GroupBy(x => x.Id)
+                .ToDictionary(x => x.Key, x => x.First());
+
+            var mapped = items
+                .Select(item =>
+                {
+                    roomDict.TryGetValue(item.RoomId ?? string.Empty, out var room);
+                    tenantDict.TryGetValue(item.TenantId ?? string.Empty, out var tenant);
+
+                    return MapToResponse(item, room, tenant);
+                })
+                .ToList();
 
             var summary = new MaintenanceSummaryResponse
             {
                 Total = mapped.Count,
                 Pending = mapped.Count(x => x.Status == MaintenanceStatus.Pending),
-                InProgress = mapped.Count(x => x.Status == MaintenanceStatus.InProgress),
+                InProgress = mapped.Count(x => x.Status == MaintenanceStatus.Processing),
                 Completed = mapped.Count(x => x.Status == MaintenanceStatus.Completed),
                 Items = mapped
             };
@@ -73,166 +130,244 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<MaintenanceRequestResponse>> GetById(string id)
         {
-            var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            if (item is null)
-                return NotFound(CommonMessage.NotFound("Yêu cầu bảo trì"));
+            var item = await _collection
+                .Find(x => x.Id == id)
+                .FirstOrDefaultAsync();
 
-            return Ok(await MapToResponseAsync(item));
+            if (item is null)
+                return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
+
+            Room? room = null;
+            User? tenant = null;
+
+            var tasks = new List<Task>();
+
+            if (!string.IsNullOrEmpty(item.RoomId))
+            {
+                tasks.Add(
+                    _roomCollection
+                        .Find(x => x.Id == item.RoomId)
+                        .FirstOrDefaultAsync()
+                        .ContinueWith(t => room = t.Result));
+            }
+
+            if (!string.IsNullOrEmpty(item.TenantId))
+            {
+                tasks.Add(
+                    _userCollection
+                        .Find(x => x.Id == item.TenantId)
+                        .FirstOrDefaultAsync()
+                        .ContinueWith(t => tenant = t.Result));
+            }
+
+            await Task.WhenAll(tasks);
+
+            return Ok(MapToResponse(item, room, tenant));
         }
 
         // POST: api/MaintenanceRequests
-        [HttpPost]
-        public async Task<ActionResult<MaintenanceRequestResponse>> Create(MaintenanceRequestRequest request)
-        {
-            var validationResult = await _validator.ValidateAsync(request);
-            if (!validationResult.IsValid)
-                return BadRequest(validationResult.Errors.Select(e => e.ErrorMessage).ToList());
+        //[HttpPost]
+        //public async Task<ActionResult<MaintenanceRequestResponse>> Create(
+        //    MaintenanceRequestRequest request)
+        //{
+        //    var errors = await ValidateRequest(request);
 
-            // Tìm phòng theo RoomNumber
-            var room = await _roomCollection
-                .Find(x => x.RoomNumber == request.RoomNumber)
+        //    var numberExists = await _collection
+        //        .Find(x => x.RequestNumber == request.RequestNumber)
+        //        .AnyAsync();
+
+        //    if (numberExists)
+        //        errors.Add($"Mã yêu cầu '{request.RequestNumber}' đã tồn tại.");
+
+        //    var roomExists = await _roomCollection
+        //        .Find(x => x.RoomNumber == request.RoomNumber)
+        //        .AnyAsync();
+
+        //    if (!roomExists)
+        //        errors.Add(CommonMessage.NotFound("Room"));
+
+        //    if (errors.Any())
+        //        return BadRequest(errors);
+
+        //    var item = _mapper.Map<MaintenanceRequest>(request);
+        //    item.CreatedAt = DateTime.UtcNow;
+
+        //    await _collection.InsertOneAsync(item);
+
+        //    return CreatedAtAction(
+        //        nameof(GetById),
+        //        new { id = item.Id },
+        //        MapToResponse(item, null, null));
+        //}
+
+        // PUT: api/MaintenanceRequests/{id}
+        //[HttpPut("{id}")]
+        //public async Task<ActionResult<MaintenanceRequestResponse>> Update(
+        //    string id,
+        //    MaintenanceRequestRequest request)
+        //{
+        //    var errors = await ValidateRequest(request);
+
+        //    var existing = await _collection
+        //        .Find(x => x.Id == id)
+        //        .FirstOrDefaultAsync();
+
+        //    if (existing is null)
+        //        return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
+
+        //    var numberExists = await _collection
+        //        .Find(x =>
+        //            x.RequestNumber == request.RequestNumber &&
+        //            x.Id != id)
+        //        .AnyAsync();
+
+        //    if (numberExists)
+        //        errors.Add($"Mã yêu cầu '{request.RequestNumber}' đã tồn tại.");
+
+        //    if (errors.Any())
+        //        return BadRequest(errors);
+
+        //    var updated = _mapper.Map<MaintenanceRequest>(request);
+
+        //    updated.Id = id;
+        //    updated.CreatedAt = existing.CreatedAt;
+        //    updated.UpdatedAt = DateTime.UtcNow;
+
+        //    await _collection.ReplaceOneAsync(
+        //        x => x.Id == id,
+        //        updated);
+
+        //    return Ok(MapToResponse(updated, null, null));
+        //}
+
+        // PUT: api/MaintenanceRequests/{id}/start
+        [HttpPut("{id}/start")]
+        public async Task<ActionResult<MaintenanceRequestResponse>> Start(string id)
+        {
+            var item = await _collection
+                .Find(x => x.Id == id)
                 .FirstOrDefaultAsync();
 
-            if (room is null)
-                return BadRequest(CommonMessage.NotFound("Phòng"));
-
-            // Tìm tenant theo tên (hoặc lấy từ room.TenantId nếu có)
-            User? tenant = null;
-            if (!string.IsNullOrEmpty(room.TenantId))
-            {
-                tenant = await _userCollection
-                    .Find(x => x.Id == room.TenantId)
-                    .FirstOrDefaultAsync();
-            }
-
-            if (tenant is null)
-            {
-                tenant = await _userCollection
-                    .Find(x => x.Name == request.TenantName)
-                    .FirstOrDefaultAsync();
-            }
-
-            if (tenant is null)
-                return BadRequest(CommonMessage.NotFound("Người thuê"));
-
-            // Kiểm tra RequestNumber trùng
-            var exists = await _collection
-                .Find(x => x.RequestNumber == request.RequestNumber)
-                .AnyAsync();
-            if (exists)
-                return BadRequest("Mã yêu cầu đã tồn tại");
-
-            var item = _mapper.Map<MaintenanceRequest>(request);
-            item.RoomId = room.Id;
-            item.TenantId = tenant.Id;
-            item.RoomNumber = room.RoomNumber;
-            item.TenantName = tenant.Name;
-            item.Status = MaintenanceStatus.Pending;
-            item.CreatedAt = DateTime.UtcNow;
-
-            await _collection.InsertOneAsync(item);
-
-            await _activityLogService.LogAsync(
-                type: ActivityType.Maintenance,
-                userName: tenant.Name,
-                roomNumber: room.RoomNumber,
-                description: $"Tạo yêu cầu bảo trì: {item.Title}");
-
-            await _notificationService.CreateAsync(
-                tenantId: tenant.Id,
-                title: "Yêu cầu bảo trì đã được ghi nhận",
-                body: $"Yêu cầu \"{item.Title}\" của phòng {room.RoomNumber} đã được tiếp nhận.",
-                type: NotificationType.Maintenance,
-                refId: item.Id,
-                refModel: "MaintenanceRequest");
-
-            return CreatedAtAction(nameof(GetById), new { id = item.Id },
-                await MapToResponseAsync(item));
-        }
-
-        // PUT: api/MaintenanceRequests/{id}/status
-        [HttpPut("{id}/status")]
-        public async Task<ActionResult<MaintenanceRequestResponse>> UpdateStatus(
-            string id, [FromBody] MaintenanceStatus newStatus)
-        {
-            var item = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
             if (item is null)
-                return NotFound(CommonMessage.NotFound("Yêu cầu bảo trì"));
+                return NotFound(CommonMessage.NotFound("MaintenanceRequest"));
 
-            var update = Builders<MaintenanceRequest>.Update
-                .Set(x => x.Status, newStatus)
-                .Set(x => x.UpdatedAt, DateTime.UtcNow);
+            if (item.Status != MaintenanceStatus.Pending)
+                return BadRequest(CommonMessage.JustStartThePendingRequest());
 
-            if (newStatus == MaintenanceStatus.Completed)
-                update = update.Set(x => x.ResolvedAt, DateTime.UtcNow);
+            var now = DateTime.UtcNow;
 
-            await _collection.UpdateOneAsync(x => x.Id == id, update);
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<MaintenanceRequest>.Update
+                    .Set(x => x.Status, MaintenanceStatus.Processing)
+                    .Set(x => x.UpdatedAt, now));
 
-            item.Status = newStatus;
-            if (newStatus == MaintenanceStatus.Completed)
-                item.ResolvedAt = DateTime.UtcNow;
-
-            string title = newStatus switch
-            {
-                MaintenanceStatus.InProgress => "Yêu cầu đang được xử lý",
-                MaintenanceStatus.Completed => "Yêu cầu sửa chữa đã hoàn thành",
-                _ => "Cập nhật trạng thái yêu cầu bảo trì"
-            };
-
-            string body = newStatus switch
-            {
-                MaintenanceStatus.InProgress => $"Yêu cầu \"{item.Title}\" (phòng {item.RoomNumber}) đang được xử lý.",
-                MaintenanceStatus.Completed => $"Yêu cầu \"{item.Title}\" (phòng {item.RoomNumber}) đã được xử lý xong.",
-                _ => $"Yêu cầu \"{item.Title}\" đã được cập nhật trạng thái."
-            };
+            item.Status = MaintenanceStatus.Processing;
+            item.UpdatedAt = now;
 
             await _notificationService.CreateAsync(
                 tenantId: item.TenantId,
-                title: title,
-                body: body,
+                title: "Yêu cầu sửa chữa đang được xử lý",
+                body: $"Yêu cầu \"{item.Title}\" (phòng {item.RoomNumber}) của bạn đang được xử lý.",
                 type: NotificationType.Maintenance,
                 refId: item.Id,
                 refModel: "MaintenanceRequest");
 
-            if (newStatus == MaintenanceStatus.Completed)
-            {
-                await _activityLogService.LogAsync(
-                    type: ActivityType.Maintenance,
-                    userName: item.TenantName,
-                    roomNumber: item.RoomNumber,
-                    description: item.Title);
-            }
-
-            return Ok(await MapToResponseAsync(item));
+            return Ok(MapToResponse(item, null, null));
         }
+
+        // PUT: api/MaintenanceRequests/{id}/complete
+        [HttpPut("{id}/complete")]
+        public async Task<ActionResult<MaintenanceRequestResponse>> Complete(string id)
+        {
+            var item = await _collection
+                .Find(x => x.Id == id)
+                .FirstOrDefaultAsync();
+
+            if (item is null)
+                return NotFound(CommonMessage.NotFound("Yêu cầu sửa chữa"));
+
+            if (item.Status != MaintenanceStatus.Processing)
+                return BadRequest(
+                    CommonMessage.JustCompleteTheInProgressRequest());
+
+            var now = DateTime.UtcNow;
+
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<MaintenanceRequest>.Update
+                    .Set(x => x.Status, MaintenanceStatus.Completed)
+                    .Set(x => x.UpdatedAt, now));
+
+            await _activityLogService.LogAsync(
+                type: ActivityType.Maintenance,
+                userName: item.TenantName,
+                roomNumber: item.RoomNumber,
+                description: item.Title);
+
+            item.Status = MaintenanceStatus.Completed;
+            item.UpdatedAt = now;
+
+            await _notificationService.CreateAsync(
+                tenantId: item.TenantId,
+                title: "Yêu cầu sửa chữa đã hoàn thành",
+                body: $"Yêu cầu \"{item.Title}\" (phòng {item.RoomNumber}) của bạn đã được xử lý xong.",
+                type: NotificationType.Maintenance,
+                refId: item.Id,
+                refModel: "MaintenanceRequest");
+
+            return Ok(MapToResponse(item, null, null));
+        }
+
+        // DELETE: api/MaintenanceRequests/{id}
+        //[HttpDelete("{id}")]
+        //public async Task<IActionResult> Delete(string id)
+        //{
+        //    var item = await _collection
+        //        .Find(x => x.Id == id)
+        //        .FirstOrDefaultAsync();
+
+        //    if (item is null)
+        //        return NotFound(
+        //            CommonMessage.NotFound("MaintenanceRequest"));
+
+        //    await _collection.DeleteOneAsync(x => x.Id == id);
+
+        //    return Ok(
+        //        CommonMessage.Deleted("MaintenanceRequest"));
+        //}
 
         // ==================== HELPERS ====================
 
-        private async Task<MaintenanceRequestResponse> MapToResponseAsync(MaintenanceRequest item)
+        //private async Task<List<string>> ValidateRequest(
+        //    MaintenanceRequestRequest request)
+        //{
+        //    var result = await _validator.ValidateAsync(request);
+
+        //    return result.Errors
+        //        .Select(e => e.ErrorMessage)
+        //        .ToList();
+        //}
+
+        private MaintenanceRequestResponse MapToResponse(
+            MaintenanceRequest item,
+            Room? room,
+            User? tenant)
         {
-            var response = _mapper.Map<MaintenanceRequestResponse>(item);
+            var response =
+                _mapper.Map<MaintenanceRequestResponse>(item);
 
-            // Lấy RoomNumber từ Room theo RoomId
-            if (!string.IsNullOrEmpty(item.RoomId))
-            {
-                var room = await _roomCollection
-                    .Find(r => r.Id == item.RoomId)
-                    .FirstOrDefaultAsync();
+            if (room != null)
+                response.RoomNumber = room.RoomNumber;
+            else if (!string.IsNullOrEmpty(item.RoomNumber))
+                response.RoomNumber = item.RoomNumber;
 
-                if (room != null)
-                    response.RoomNumber = room.RoomNumber;
-            }
+            if (tenant != null)
+                response.TenantName = tenant.Name;
+            else if (!string.IsNullOrEmpty(item.TenantName))
+                response.TenantName = item.TenantName;
 
-            // Lấy TenantName từ User theo TenantId
-            if (!string.IsNullOrEmpty(item.TenantId))
-            {
-                var tenant = await _userCollection
-                    .Find(u => u.Id == item.TenantId)
-                    .FirstOrDefaultAsync();
-
-                if (tenant != null)
-                    response.TenantName = tenant.Name;
-            }
+            response.Images = item.Images ?? new List<string>();
 
             response.PriorityLabel = item.Priority switch
             {
@@ -245,7 +380,7 @@ namespace SmartBoardingHouse.Controllers
             response.StatusLabel = item.Status switch
             {
                 MaintenanceStatus.Pending => "Chờ xử lý",
-                MaintenanceStatus.InProgress => "Đang xử lý",
+                MaintenanceStatus.Processing => "Đang xử lý",
                 MaintenanceStatus.Completed => "Hoàn thành",
                 _ => item.Status.ToString()
             };

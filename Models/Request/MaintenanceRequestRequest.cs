@@ -11,6 +11,7 @@ namespace SmartBoardingHouse.Models.Request
         public string TenantName { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public List<IFormFile>? Images { get; set; }
         public PriotyRequest Priority { get; set; } = PriotyRequest.Low;
         public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Pending;
     }
