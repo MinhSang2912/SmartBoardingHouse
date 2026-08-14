@@ -8,6 +8,7 @@ using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Service;
 using System.Security.Claims;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Controllers
 {
@@ -27,19 +28,22 @@ namespace SmartBoardingHouse.Controllers
             IValidator<NotificationRequest> validator,
             INotificationService notificationService)
         {
-            _notificationCollection = database.GetCollection<Notification>("notifications");
+            _notificationCollection =
+                database.GetCollection<Notification>("notifications");
+
             _mapper = mapper;
             _validator = validator;
             _notificationService = notificationService;
         }
 
-        /// <summary>
-        /// Tạo thông báo mới (thủ công, do Admin gửi)
-        /// </summary>
+        // POST: api/Notification
         //[HttpPost]
-        //public async Task<IActionResult> CreateNotification([FromBody] NotificationRequest request)
+        //public async Task<IActionResult> CreateNotification(
+        //    [FromBody] NotificationRequest request)
         //{
-        //    var validationResult = await _validator.ValidateAsync(request);
+        //    var validationResult =
+        //        await _validator.ValidateAsync(request);
+
         //    if (!validationResult.IsValid)
         //        return BadRequest(validationResult.Errors);
 
@@ -53,142 +57,258 @@ namespace SmartBoardingHouse.Controllers
         //        meta: request.Meta);
 
         //    if (response is null)
-        //        return StatusCode(500, new { message = "Không thể tạo thông báo, vui lòng thử lại" });
+        //        return StatusCode(
+        //            500,
+        //            new
+        //            {
+        //                message =
+        //                    "Không thể tạo thông báo, vui lòng thử lại"
+        //            });
 
         //    return Ok(response);
         //}
 
-        /// <summary>
-        /// Lấy danh sách thông báo của Tenant hiện tại
-        /// </summary>
+        // GET: api/Notification
         [HttpGet]
-        public async Task<IActionResult> GetNotifications(int page = 1, int pageSize = 20, bool? isRead = null)
+        public async Task<IActionResult> GetNotifications(
+            int page = 1,
+            int pageSize = 20,
+            bool? isRead = null,
+            NotificationType? type = null)
         {
-            var tenantId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                        ?? User.FindFirst("sub")?.Value;
+            var tenantId =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrEmpty(tenantId))
                 return Unauthorized();
 
-            var filter = Builders<Notification>.Filter.Eq(n => n.TenantId, tenantId);
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var filter =
+                Builders<Notification>.Filter.Eq(
+                    n => n.TenantId,
+                    tenantId);
 
             if (isRead.HasValue)
-                filter &= Builders<Notification>.Filter.Eq(n => n.IsRead, isRead.Value);
+            {
+                filter &= Builders<Notification>.Filter.Eq(
+                    n => n.IsRead,
+                    isRead.Value);
+            }
 
-            var notifications = await _notificationCollection.Find(filter)
+            if (type.HasValue)
+            {
+                filter &= Builders<Notification>.Filter.Eq(
+                    n => n.Type,
+                    type.Value);
+            }
+
+            var totalCount =
+                await _notificationCollection.CountDocumentsAsync(filter);
+
+            var notifications = await _notificationCollection
+                .Find(filter)
                 .SortByDescending(n => n.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Limit(pageSize)
                 .ToListAsync();
 
-            var response = _mapper.Map<List<NotificationResponse>>(notifications);
-            return Ok(response);
-        }
-
-        /// <summary>
-        /// Lấy tất cả thông báo do Admin đã tạo (toàn hệ thống, không lọc theo tenant)
-        /// </summary>
-        [HttpGet("all")]
-        public async Task<IActionResult> GetAllNotifications(int page = 1, int pageSize = 20, bool? isRead = null)
-        {
-            var filter = isRead.HasValue
-                ? Builders<Notification>.Filter.Eq(n => n.IsRead, isRead.Value)
-                : Builders<Notification>.Filter.Empty;
-
-            var totalCount = await _notificationCollection.CountDocumentsAsync(filter);
-
-            var notifications = await _notificationCollection.Find(filter)
-                .SortByDescending(n => n.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Limit(pageSize)
-                .ToListAsync();
-
-            var response = _mapper.Map<List<NotificationResponse>>(notifications);
+            var response =
+                _mapper.Map<List<NotificationResponse>>(notifications);
 
             return Ok(new
             {
                 totalCount,
                 page,
                 pageSize,
-                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                totalPages =
+                    (int)Math.Ceiling(
+                        (double)totalCount / pageSize),
                 data = response
             });
         }
 
-        /// <summary>
-        /// Lấy danh sách thông báo theo userId cụ thể
-        /// </summary>
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetNotificationsByUserId(
-            string userId,
+        // GET: api/Notification/all
+        // Admin: lấy tất cả thông báo toàn hệ thống
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllNotifications(
             int page = 1,
             int pageSize = 20,
-            bool? isRead = null)
+            bool? isRead = null,
+            NotificationType? type = null)
         {
-            if (string.IsNullOrEmpty(userId))
-                return BadRequest(new { message = "UserId là bắt buộc" });
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var filter = Builders<Notification>.Filter.Eq(n => n.TenantId, userId);
+            var filter =
+                Builders<Notification>.Filter.Empty;
 
             if (isRead.HasValue)
-                filter &= Builders<Notification>.Filter.Eq(n => n.IsRead, isRead.Value);
+            {
+                filter &= Builders<Notification>.Filter.Eq(
+                    n => n.IsRead,
+                    isRead.Value);
+            }
 
-            var totalCount = await _notificationCollection.CountDocumentsAsync(filter);
+            if (type.HasValue)
+            {
+                filter &= Builders<Notification>.Filter.Eq(
+                    n => n.Type,
+                    type.Value);
+            }
 
-            var notifications = await _notificationCollection.Find(filter)
+            var totalCount =
+                await _notificationCollection.CountDocumentsAsync(filter);
+
+            var notifications = await _notificationCollection
+                .Find(filter)
                 .SortByDescending(n => n.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Limit(pageSize)
                 .ToListAsync();
 
-            var response = _mapper.Map<List<NotificationResponse>>(notifications);
+            var response =
+                _mapper.Map<List<NotificationResponse>>(notifications);
 
-            return Ok(response);
+            return Ok(new
+            {
+                totalCount,
+                page,
+                pageSize,
+                totalPages =
+                    (int)Math.Ceiling(
+                        (double)totalCount / pageSize),
+                data = response
+            });
         }
 
-        /// <summary>
-        /// Đánh dấu thông báo đã đọc
-        /// </summary>
+        // GET: api/Notification/user/{userId}
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetNotificationsByUserId(
+            string userId,
+            int page = 1,
+            int pageSize = 20,
+            bool? isRead = null,
+            NotificationType? type = null)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(
+                    new
+                    {
+                        message = "UserId là bắt buộc"
+                    });
+            }
+
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var filter =
+                Builders<Notification>.Filter.Eq(
+                    n => n.TenantId,
+                    userId);
+
+            if (isRead.HasValue)
+            {
+                filter &= Builders<Notification>.Filter.Eq(
+                    n => n.IsRead,
+                    isRead.Value);
+            }
+
+            if (type.HasValue)
+            {
+                filter &= Builders<Notification>.Filter.Eq(
+                    n => n.Type,
+                    type.Value);
+            }
+
+            var totalCount =
+                await _notificationCollection.CountDocumentsAsync(filter);
+
+            var notifications = await _notificationCollection
+                .Find(filter)
+                .SortByDescending(n => n.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            var response =
+                _mapper.Map<List<NotificationResponse>>(notifications);
+
+            return Ok(new
+            {
+                totalCount,
+                page,
+                pageSize,
+                totalPages =
+                    (int)Math.Ceiling(
+                        (double)totalCount / pageSize),
+                data = response
+            });
+        }
+
+        // PUT: api/Notification/mark-read/{id}
         [HttpPut("mark-read/{id}")]
         public async Task<IActionResult> MarkAsRead(string id)
         {
-            var update = Builders<Notification>.Update
-                .Set(n => n.IsRead, true)
-                .Set(n => n.ReadAt, DateTime.UtcNow)
-                .Set(n => n.UpdatedAt, DateTime.UtcNow);
+            var update =
+                Builders<Notification>.Update
+                    .Set(n => n.IsRead, true)
+                    .Set(n => n.ReadAt, DateTime.UtcNow)
+                    .Set(n => n.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _notificationCollection.UpdateOneAsync(
-                n => n.Id == id,
-                update);
+            var result =
+                await _notificationCollection.UpdateOneAsync(
+                    n => n.Id == id,
+                    update);
 
-            if (result.ModifiedCount == 0)
-                return NotFound(new { message = "Không tìm thấy thông báo" });
+            if (result.MatchedCount == 0)
+            {
+                return NotFound(
+                    new
+                    {
+                        message = "Không tìm thấy thông báo"
+                    });
+            }
 
-            return Ok(new { message = "Đã đánh dấu đã đọc" });
+            return Ok(
+                new
+                {
+                    message = "Đã đánh dấu đã đọc"
+                });
         }
 
-        /// <summary>
-        /// Đánh dấu tất cả thông báo là đã đọc
-        /// </summary>
+        // PUT: api/Notification/mark-all-read
         [HttpPut("mark-all-read")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var tenantId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                        ?? User.FindFirst("sub")?.Value;
+            var tenantId =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
 
             if (string.IsNullOrEmpty(tenantId))
                 return Unauthorized();
 
-            var update = Builders<Notification>.Update
-                .Set(n => n.IsRead, true)
-                .Set(n => n.ReadAt, DateTime.UtcNow)
-                .Set(n => n.UpdatedAt, DateTime.UtcNow);
+            var update =
+                Builders<Notification>.Update
+                    .Set(n => n.IsRead, true)
+                    .Set(n => n.ReadAt, DateTime.UtcNow)
+                    .Set(n => n.UpdatedAt, DateTime.UtcNow);
 
             await _notificationCollection.UpdateManyAsync(
-                n => n.TenantId == tenantId && !n.IsRead,
+                n =>
+                    n.TenantId == tenantId &&
+                    !n.IsRead,
                 update);
 
-            return Ok(new { message = "Đã đánh dấu tất cả thông báo là đã đọc" });
+            return Ok(
+                new
+                {
+                    message =
+                        "Đã đánh dấu tất cả thông báo là đã đọc"
+                });
         }
     }
 }
