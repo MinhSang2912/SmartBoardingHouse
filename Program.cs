@@ -46,6 +46,13 @@ foreach (var enumType in new[]
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.Sources.Clear();
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args);
+
 // ====================== SERVICES ======================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
