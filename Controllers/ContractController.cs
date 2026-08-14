@@ -232,7 +232,7 @@ namespace SmartBoardingHouse.Controllers
             await _notificationService.CreateAsync(
                 tenantId: contract.TenantId,
                 title: "Hợp đồng đã chấm dứt",
-                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt, người thuê {contract.ContractNumber} đã trả phòng",
+                body: $"Hợp đồng số {contract.ContractNumber} cho phòng {contract.RoomNumber} đã được chấm dứt, người thuê {contract.TenantName} đã trả phòng",
                 type: NotificationType.Contract,
                 refId: contract.Id,
                 refModel: "Contract");
