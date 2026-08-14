@@ -29,7 +29,7 @@
         public enum MaintenanceStatus
         {
             Pending = 0,
-            Processing = 1,
+            InProgress = 1,
             Completed = 2,
             Canceled = 3
         }

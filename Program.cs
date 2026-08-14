@@ -43,7 +43,25 @@ foreach (var enumType in new[]
     BsonSerializer.RegisterSerializer(enumType, serializer);
 }
 
-var builder = WebApplication.CreateBuilder(args);
+// Dùng CreateEmptyBuilder để tránh lỗi inotify
+var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions
+{
+    Args = args
+});
+
+// Configuration (tắt reloadOnChange)
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args);
+
+// Bắt buộc khi dùng CreateEmptyBuilder
+builder.WebHost.UseKestrel();
+
+// Port cho Render
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // ====================== SERVICES ======================
 builder.Services.AddEndpointsApiExplorer();
@@ -146,9 +164,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReact",
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true) // Cho phép TẤT CẢ origin gọi vào
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 
