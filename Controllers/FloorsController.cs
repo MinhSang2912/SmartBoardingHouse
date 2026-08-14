@@ -117,6 +117,11 @@ namespace SmartBoardingHouse.Controllers
                 .AnyAsync();
             if (floorNumberExists)
                 errors.Add(CommonMessage.IsExists("Số Tầng"));
+            var floorNameExists = await _floorCollection
+                .Find(x => x.Name == updatedFloor.Name && x.Id != id)
+                .AnyAsync();
+            if (floorNameExists)
+                errors.Add(CommonMessage.IsExists("Tên Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);
