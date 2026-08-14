@@ -43,10 +43,13 @@ foreach (var enumType in new[]
     BsonSerializer.RegisterSerializer(enumType, serializer);
 }
 
-var builder = WebApplication.CreateBuilder(args);
+// Dùng CreateEmptyBuilder để không tạo FileSystemWatcher (tránh lỗi inotify trên Render)
+var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions
+{
+    Args = args
+});
 
-// Tắt reloadOnChange để tránh lỗi inotify trên Render
-builder.Configuration.Sources.Clear();
+// Thêm configuration thủ công, tắt reloadOnChange
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
