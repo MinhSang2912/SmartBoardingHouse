@@ -14,6 +14,7 @@ namespace SmartBoardingHouse.Models.Response
         public string PriorityLabel { get; set; } = string.Empty;
         public MaintenanceStatus Status { get; set; }
         public string StatusLabel { get; set; } = string.Empty;
+        public List<string> Images { get; set; } = new();
         public DateTime CreatedAt { get; set; }
     }
 
