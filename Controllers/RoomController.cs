@@ -43,16 +43,12 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet]
         public async Task<ActionResult<List<RoomResponse>>> GetAll()
         {
-            var filter = Builders<Room>.Filter.Eq(r => r.IsActive, true);
-            var rooms = await _collection.Find(filter).ToListAsync();
-
+            var rooms = await _collection.Find(_=>true).ToListAsync();
             var result = new List<RoomResponse>();
-
             foreach (var room in rooms)
             {
                 result.Add(await MapToResponseAsync(room));
             }
-
             return Ok(result);
         }
 
@@ -73,23 +69,48 @@ namespace SmartBoardingHouse.Controllers
         {
             var errors = await ValidateRequest(request);
 
-            var roomNumberExists = await _collection
-                .Find(x => x.RoomNumber == request.RoomNumber && x.IsActive)
-                .AnyAsync();
-            if (roomNumberExists)
-                errors.Add(CommonMessage.RoomNumberExists());
-
             var floor = await _floorCollection
                 .Find(x => x.Id == request.FloorId)
                 .FirstOrDefaultAsync();
             if (floor is null)
                 errors.Add(CommonMessage.NotFound("Tầng"));
 
+            // 1. Kiểm tra xem phòng với số phòng này đã tồn tại hay chưa 
+            var existingRoom = await _collection
+                .Find(x => x.RoomNumber == request.RoomNumber)
+                .FirstOrDefaultAsync();
+
+            if (existingRoom != null)
+            {
+                if (existingRoom.IsActive)
+                {
+                    // Nếu phòng đang hoạt động mà trùng số thì báo lỗi đã tồn tại
+                    errors.Add(CommonMessage.RoomNumberExists());
+                }
+            }
+
             if (errors.Any())
                 return BadRequest(errors);
 
+            // 2. Nếu phòng đã tồn tại nhưng IsActive = false thì tiến hành tái sử dụng (Update)
+            if (existingRoom != null && !existingRoom.IsActive)
+            {
+                // Map dữ liệu mới từ request vào phòng cũ
+                _mapper.Map(request, existingRoom);
+
+                // Kích hoạt lại phòng và cập nhật thời gian
+                existingRoom.IsActive = true;
+                existingRoom.UpdatedAt = DateTime.UtcNow;
+
+                await _collection.ReplaceOneAsync(x => x.Id == existingRoom.Id, existingRoom);
+
+                return Ok(await MapToResponseAsync(existingRoom));
+            }
+
+            // 3. Nếu chưa tồn tại hoàn toàn thì thực hiện thêm mới (Insert) như bình thường
             var room = _mapper.Map<Room>(request);
             room.CreatedAt = DateTime.UtcNow;
+            room.IsActive = true; // Đảm bảo tạo mới mặc định là true
 
             await _collection.InsertOneAsync(room);
 
@@ -176,13 +197,20 @@ namespace SmartBoardingHouse.Controllers
                 response.FloorNumber = floor?.FloorNumber ?? 0;
             }
 
-            response.StatusLabel = room.Status switch
+            if (!room.IsActive)
             {
-                RoomStatus.Available => "Trống",
-                RoomStatus.Occupied => "Đã thuê",
-                RoomStatus.Maintenance => "Bảo trì",
-                _ => room.Status.ToString()
-            };
+                response.StatusLabel = "Không hoạt động";
+            }
+            else
+            {
+                response.StatusLabel = room.Status switch
+                {
+                    RoomStatus.Available => "Trống",
+                    RoomStatus.Occupied => "Đã thuê",
+                    RoomStatus.NotActive => "Không hoạt động",
+                    _ => room.Status.ToString()
+                };
+            }
 
             // Lấy Tenant theo TenantId (ưu tiên) hoặc qua hợp đồng active
             if (!string.IsNullOrEmpty(room.TenantId))
