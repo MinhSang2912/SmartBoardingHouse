@@ -13,6 +13,7 @@ namespace SmartBoardingHouse.Models.Response
         public string? RefModel { get; set; }
         public Dictionary<string, object>? Meta { get; set; }
         public bool IsRead { get; set; }
+        public bool IsReadAdmin { get; set; }
         public DateTime? ReadAt { get; set; }
         public DateTime CreatedAt { get; set; }
     }

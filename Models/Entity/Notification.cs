@@ -37,6 +37,8 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("readAt")]
         public DateTime? ReadAt { get; set; }
+        [BsonElement("isReadAdmin")]
+        public bool IsReadAdmin { get; set; } = false;
 
     }
 }
