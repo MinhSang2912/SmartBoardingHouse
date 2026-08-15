@@ -43,5 +43,7 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("status")]
         public RoomStatus Status { get; set; } = RoomStatus.Available;
+        [BsonElement("isActive")]
+        public bool IsActive { get; set; } = true;
     }
 }

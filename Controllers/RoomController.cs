@@ -43,7 +43,9 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet]
         public async Task<ActionResult<List<RoomResponse>>> GetAll()
         {
-            var rooms = await _collection.Find(_ => true).ToListAsync();
+            var filter = Builders<Room>.Filter.Eq(r => r.IsActive, true);
+            var rooms = await _collection.Find(filter).ToListAsync();
+
             var result = new List<RoomResponse>();
 
             foreach (var room in rooms)
@@ -58,7 +60,7 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<RoomResponse>> GetById(string id)
         {
-            var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            var room = await _collection.Find(x => x.Id == id && x.IsActive).FirstOrDefaultAsync();
             if (room is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
@@ -72,7 +74,7 @@ namespace SmartBoardingHouse.Controllers
             var errors = await ValidateRequest(request);
 
             var roomNumberExists = await _collection
-                .Find(x => x.RoomNumber == request.RoomNumber)
+                .Find(x => x.RoomNumber == request.RoomNumber && x.IsActive)
                 .AnyAsync();
             if (roomNumberExists)
                 errors.Add(CommonMessage.RoomNumberExists());
@@ -106,7 +108,7 @@ namespace SmartBoardingHouse.Controllers
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
             var roomNumberExists = await _collection
-                .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id)
+                .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id && x.IsActive)
                 .AnyAsync();
             if (roomNumberExists)
                 errors.Add(CommonMessage.RoomNumberExists());
@@ -132,7 +134,7 @@ namespace SmartBoardingHouse.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            var room = await _collection.Find(x => x.Id == id && x.IsActive).FirstOrDefaultAsync();
             if (room is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
@@ -144,7 +146,12 @@ namespace SmartBoardingHouse.Controllers
             if (activeContractExists)
                 return BadRequest(CommonMessage.RoomHasActiveContract());
 
-            await _collection.DeleteOneAsync(x => x.Id == id);
+            var update = Builders<Room>.Update
+                .Set(x => x.IsActive, false)
+                .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+            await _collection.UpdateOneAsync(x => x.Id == id, update);
+
             return Ok(CommonMessage.Deleted("Phòng"));
         }
 
