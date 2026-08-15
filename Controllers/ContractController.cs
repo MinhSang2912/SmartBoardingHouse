@@ -97,19 +97,19 @@ namespace SmartBoardingHouse.Controllers
             if (activeContractForRoom)
                 errors.Add(CommonMessage.ContractRoomIsExists());
 
-            // Tìm người thuê theo tên
+            //// Tìm người thuê theo tên
             var tenant = await _userCollection
                 .Find(x => x.Name == request.TenantName)
                 .FirstOrDefaultAsync();
             if (tenant is null)
                 return BadRequest(CommonMessage.NotFound("Người thuê"));
 
-            // Người thuê đã có hợp đồng đang hiệu lực
-            var activeContractForTenant = await _contractCollection
-                .Find(x => x.TenantId == tenant.Id && x.Status == ContractStatus.Active)
-                .AnyAsync();
-            if (activeContractForTenant)
-                return BadRequest(CommonMessage.ContractTenantIsExists());
+            //// Người thuê đã có hợp đồng đang hiệu lực
+            //var activeContractForTenant = await _contractCollection
+            //    .Find(x => x.TenantId == tenant.Id && x.Status == ContractStatus.Active)
+            //    .AnyAsync();
+            //if (activeContractForTenant)
+            //    return BadRequest(CommonMessage.ContractTenantIsExists());
 
             if (errors.Any())
                 return BadRequest(errors);

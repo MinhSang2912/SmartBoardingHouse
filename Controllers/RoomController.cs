@@ -92,7 +92,7 @@ namespace SmartBoardingHouse.Controllers
             if (errors.Any())
                 return BadRequest(errors);
 
-            // 2. Nếu phòng đã tồn tại nhưng IsActive = false thì tiến hành tái sử dụng (Update)
+            // Nếu phòng đã tồn tại nhưng IsActive = false thì tiến hành tái sử dụng (Update)
             if (existingRoom != null && !existingRoom.IsActive)
             {
                 // Map dữ liệu mới từ request vào phòng cũ
@@ -107,7 +107,7 @@ namespace SmartBoardingHouse.Controllers
                 return Ok(await MapToResponseAsync(existingRoom));
             }
 
-            // 3. Nếu chưa tồn tại hoàn toàn thì thực hiện thêm mới (Insert) như bình thường
+            // Nếu chưa tồn tại hoàn toàn thì thực hiện thêm mới (Insert) như bình thường
             var room = _mapper.Map<Room>(request);
             room.CreatedAt = DateTime.UtcNow;
             room.IsActive = true; // Đảm bảo tạo mới mặc định là true
