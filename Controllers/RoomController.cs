@@ -129,7 +129,7 @@ namespace SmartBoardingHouse.Controllers
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
             var roomNumberExists = await _collection
-                .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id && x.IsActive)
+                .Find(x => x.RoomNumber == request.RoomNumber && x.Id != id)
                 .AnyAsync();
             if (roomNumberExists)
                 errors.Add(CommonMessage.RoomNumberExists());
