@@ -32,7 +32,7 @@ namespace SmartBoardingHouse.Controllers
             var dto = new DashboardResponse();
 
             // Thống kê phòng
-            var totalRooms = await _roomCollection.CountDocumentsAsync(_ => true);
+            var totalRooms = await _roomCollection.CountDocumentsAsync(x=>x.IsActive);
             var rentedRooms = await _roomCollection.CountDocumentsAsync(r => r.Status == RoomStatus.Occupied);
             dto.TotalRooms = (int)totalRooms;
             dto.RentedRooms = (int)rentedRooms;

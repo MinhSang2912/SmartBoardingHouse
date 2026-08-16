@@ -35,7 +35,7 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<FloorResponse>> GetAll()
         {
             var floors = await _floorCollection.Find(_ => true).ToListAsync();
-            var rooms = await _roomCollection.Find(_ => true).ToListAsync();
+            var rooms = await _roomCollection.Find(x=>x.IsActive).ToListAsync();
 
             var floorItems = floors.Select(floor =>
             {
