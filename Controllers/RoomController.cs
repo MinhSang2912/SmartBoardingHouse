@@ -169,6 +169,7 @@ namespace SmartBoardingHouse.Controllers
 
             var update = Builders<Room>.Update
                 .Set(x => x.IsActive, false)
+                .Set(x => x.Status, RoomStatus.InActive)
                 .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
             await _collection.UpdateOneAsync(x => x.Id == id, update);
@@ -207,7 +208,7 @@ namespace SmartBoardingHouse.Controllers
                 {
                     RoomStatus.Available => "Trống",
                     RoomStatus.Occupied => "Đã thuê",
-                    RoomStatus.NotActive => "Không hoạt động",
+                    RoomStatus.InActive => "Không hoạt động",
                     _ => room.Status.ToString()
                 };
             }

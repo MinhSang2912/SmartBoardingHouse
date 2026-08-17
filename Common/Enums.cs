@@ -17,7 +17,7 @@
         {
             Available = 0,
             Occupied = 1,
-            NotActive = 2
+            InActive = 2
         }
         public enum InvoiceStatus
         {

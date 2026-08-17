@@ -1,4 +1,4 @@
-using static SmartBoardingHouse.Common.Enums;
+﻿using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Response
 {
@@ -16,5 +16,13 @@ namespace SmartBoardingHouse.Models.Response
         public bool IsReadAdmin { get; set; }
         public DateTime? ReadAt { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class NotificationListResponse
+    {
+        public int TotalCount { get; set; }      // Tổng thông báo
+        public int UnreadCount { get; set; }     // Chưa đọc (IsReadAdmin = false)
+        public int ReadCount { get; set; }        // Đã đọc (IsReadAdmin = true)
+        public List<NotificationResponse> Data { get; set; } = new();
     }
 }

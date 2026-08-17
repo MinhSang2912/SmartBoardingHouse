@@ -83,52 +83,22 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/Notification/all
         [HttpGet("all")]
-        public async Task<IActionResult> GetAllNotifications(
-            int page = 1,
-            int pageSize = 20,
-            bool? isRead = null,
-            bool? isReadAdmin = null,
-            NotificationType? type = null)
+        public async Task<IActionResult> GetAllNotifications()
         {
-            page = Math.Max(page, 1);
-            pageSize = Math.Clamp(pageSize, 1, 100);
-
-            var filter = Builders<Notification>.Filter.Empty;
-
-            if (isRead.HasValue)
-            {
-                filter &= Builders<Notification>.Filter.Eq(n => n.IsRead, isRead.Value);
-            }
-
-            if (isReadAdmin.HasValue)
-            {
-                filter &= Builders<Notification>.Filter.Eq(n => n.IsReadAdmin, isReadAdmin.Value);
-            }
-
-            if (type.HasValue)
-            {
-                filter &= Builders<Notification>.Filter.Eq(n => n.Type, type.Value);
-            }
-
-            var totalCount = await _notificationCollection.CountDocumentsAsync(filter);
-
             var notifications = await _notificationCollection
-                .Find(filter)
+                .Find(Builders<Notification>.Filter.Empty)
                 .SortByDescending(n => n.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Limit(pageSize)
                 .ToListAsync();
 
-            var response = _mapper.Map<List<NotificationResponse>>(notifications);
-
-            return Ok(new
+            var response = new NotificationListResponse
             {
-                totalCount,
-                page,
-                pageSize,
-                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
-                data = response
-            });
+                TotalCount = notifications.Count,
+                UnreadCount = notifications.Count(n => !n.IsReadAdmin),
+                ReadCount = notifications.Count(n => n.IsReadAdmin),
+                Data = _mapper.Map<List<NotificationResponse>>(notifications)
+            };
+
+            return Ok(response);
         }
 
         // GET: api/Notification/user/{userId}

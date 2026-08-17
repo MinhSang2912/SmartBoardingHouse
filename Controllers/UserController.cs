@@ -122,7 +122,7 @@ namespace SmartBoardingHouse.Controllers
             return Ok(await MapToResponseAsync(existingUser));
         }
 
-        // DELETE: api/Users/{id}  (soft delete)
+        // DELETE: api/Users/{id} 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -152,22 +152,46 @@ namespace SmartBoardingHouse.Controllers
         }
 
         // ==================== HELPERS ====================
-
         private async Task<UserResponse> MapToResponseAsync(User user)
         {
             var response = _mapper.Map<UserResponse>(user);
 
-            // Lấy RoomNumber từ Room theo RoomId (không phụ thuộc field cache)
-            if (!string.IsNullOrEmpty(user.RoomId))
-            {
-                var room = await _roomCollection
-                    .Find(r => r.Id == user.RoomId)
-                    .FirstOrDefaultAsync();
+            // Lấy tất cả hợp đồng đang Active của người này
+            var activeContracts = await _contractCollection
+                .Find(c => c.TenantId == user.Id && c.Status == ContractStatus.Active)
+                .ToListAsync();
 
-                response.RoomNumber = room?.RoomNumber ?? "Chưa có phòng";
+            if (activeContracts.Any())
+            {
+                var roomIds = activeContracts
+                    .Select(c => c.RoomId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct()
+                    .ToList();
+
+                // Lấy thông tin phòng
+                var rooms = await _roomCollection
+                    .Find(r => roomIds.Contains(r.Id))
+                    .ToListAsync();
+
+                response.ActiveRoomIds = rooms.Select(r => r.Id).ToList();
+                response.ActiveRoomNumbers = rooms
+                    .Select(r => r.RoomNumber)
+                    .Where(n => !string.IsNullOrEmpty(n))
+                    .ToList();
+
+                response.ActiveRoomCount = response.ActiveRoomNumbers.Count;
+
+                // Giữ tương thích với field cũ (nếu frontend vẫn dùng)
+                response.RoomNumber = response.ActiveRoomCount > 0
+                    ? string.Join(", ", response.ActiveRoomNumbers)
+                    : "Chưa có phòng";
             }
             else
             {
+                response.ActiveRoomCount = 0;
+                response.ActiveRoomNumbers = new List<string>();
+                response.ActiveRoomIds = new List<string>();
                 response.RoomNumber = "Chưa có phòng";
             }
 
