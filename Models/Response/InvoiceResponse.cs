@@ -27,6 +27,7 @@ namespace SmartBoardingHouse.Models.Response
         public decimal ServiceFee { get; set; }
         public decimal Amount { get; set; }
         public string? Note { get; set; }
+        public string? ReceiptImage { get; set; }
         public List<InvoiceItem> Items { get; set; } = new();
     }
 }

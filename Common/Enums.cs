@@ -21,10 +21,12 @@
         }
         public enum InvoiceStatus
         {
-            Unpaid = 0,
+            Pending = 0,
             Paid = 1,
-            Overdue = 2,
-            Partial = 3
+            Cancelled = 2,
+            Unpaid = 3,
+            Overdue = 4,
+            Partial = 5
         }
         public enum MaintenanceStatus
         {

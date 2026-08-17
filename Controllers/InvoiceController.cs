@@ -226,6 +226,76 @@ namespace SmartBoardingHouse.Controllers
             return Ok(CommonMessage.Deleted("Hóa đơn"));
         }
 
+        // ==================== STATUS TRANSITIONS ====================
+
+        // PUT: api/Invoices/{id}/confirm-payment 
+        [HttpPut("{id}/confirm-payment")]
+        public Task<ActionResult<InvoiceResponse>> ConfirmPayment(string id) =>
+            ChangeStatusAsync(
+                id,
+                newStatus: InvoiceStatus.Paid,
+                allowedCurrentStatuses: new[] { InvoiceStatus.Pending, InvoiceStatus.Unpaid, InvoiceStatus.Overdue },
+                notificationTitle: "Thanh toán thành công",
+                notificationBody: invoice => $"Hóa đơn {invoice.InvoiceNumber} đã được xác nhận thanh toán {invoice.Amount:N0}đ.");
+
+        // PUT: api/Invoices/{id}/cancel  (Pending -> Cancelled)
+        [HttpPut("{id}/cancel")]
+        public Task<ActionResult<InvoiceResponse>> Cancel(string id) =>
+            ChangeStatusAsync(
+                id,
+                newStatus: InvoiceStatus.Cancelled,
+                allowedCurrentStatuses: new[] { InvoiceStatus.Pending },
+                notificationTitle: "Hóa đơn đã bị hủy",
+                notificationBody: invoice => $"Hóa đơn {invoice.InvoiceNumber} đã bị hủy.");
+
+        // PUT: api/Invoices/{id}/reactivate  (Cancelled -> Unpaid)
+        [HttpPut("{id}/reactivate")]
+        public Task<ActionResult<InvoiceResponse>> Reactivate(string id) =>
+            ChangeStatusAsync(
+                id,
+                newStatus: InvoiceStatus.Unpaid,
+                allowedCurrentStatuses: new[] { InvoiceStatus.Cancelled },
+                notificationTitle: null,
+                notificationBody: null);
+
+        // ==================== STATUS HELPER ====================
+
+        private async Task<ActionResult<InvoiceResponse>> ChangeStatusAsync(
+            string id,
+            InvoiceStatus newStatus,
+            InvoiceStatus[] allowedCurrentStatuses,
+            string? notificationTitle,
+            Func<Invoice, string>? notificationBody)
+        {
+            var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (invoice is null)
+                return NotFound(CommonMessage.NotFound("Hóa đơn"));
+
+            if (!allowedCurrentStatuses.Contains(invoice.Status))
+                return BadRequest($"Không thể chuyển hóa đơn từ trạng thái '{invoice.Status}' sang '{newStatus}'.");
+
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<Invoice>.Update
+                    .Set(x => x.Status, newStatus)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
+
+            invoice.Status = newStatus;
+
+            if (notificationTitle != null && notificationBody != null)
+            {
+                await _notificationService.CreateAsync(
+                    tenantId: invoice.TenantId,
+                    title: notificationTitle,
+                    body: notificationBody(invoice),
+                    type: NotificationType.Invoice,
+                    refId: invoice.Id,
+                    refModel: "Invoice");
+            }
+
+            return Ok(await MapToResponse(invoice));
+        }
+
         // ==================== HELPERS ====================
 
         private async Task<List<string>> ValidateRequest(InvoiceRequest request)
@@ -240,7 +310,7 @@ namespace SmartBoardingHouse.Controllers
             response.ElectricTotal = (decimal)response.ElectricUsage * response.ElectricPrice;
             response.WaterTotal = (decimal)response.WaterUsage * response.WaterPrice;
 
-            var effectiveStatus = invoice.Status == InvoiceStatus.Unpaid && invoice.DueDate < DateTime.Now
+            var effectiveStatus = invoice.Status == InvoiceStatus.Pending && invoice.DueDate < DateTime.Now
                 ? InvoiceStatus.Overdue
                 : invoice.Status;
             response.Status = effectiveStatus;
@@ -248,6 +318,8 @@ namespace SmartBoardingHouse.Controllers
             {
                 InvoiceStatus.Paid => "Đã thanh toán",
                 InvoiceStatus.Unpaid => "Chờ thanh toán",
+                InvoiceStatus.Pending => "Đang xử lý",
+                InvoiceStatus.Cancelled => "Đã hủy",
                 InvoiceStatus.Overdue => "Quá hạn",
                 _ => effectiveStatus.ToString()
             };

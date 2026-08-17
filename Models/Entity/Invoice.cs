@@ -29,6 +29,8 @@ namespace SmartBoardingHouse.Models.Entity
         // Cache hiển thị
         [BsonElement("roomNumber")]
         public string RoomNumber { get; set; } = string.Empty;
+        [BsonElement("tenantName")]
+        public string TenantName { get; set; } = string.Empty;
 
         [BsonElement("month")]
         public int BillingMonth { get; set; }
@@ -81,6 +83,8 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("type")]
         public InvoiceType Type { get; set; } = InvoiceType.Rent;
+        [BsonElement("receiptImage")]
+        public string? ReceiptImage { get; set; }
     }
 
     public class InvoiceItem
