@@ -17,6 +17,10 @@ namespace SmartBoardingHouse.Models.Entity
         [BsonRepresentation(BsonType.ObjectId)]
         public string TenantId { get; set; } = string.Empty;
 
+        [BsonElement("contract")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string ContractId { get; set; } = string.Empty;
+        
         [BsonElement("roomNumber")]
         public string RoomNumber { get; set; } = string.Empty;
 
