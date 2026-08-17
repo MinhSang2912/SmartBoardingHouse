@@ -22,6 +22,7 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<Contract> _contractCollection;
         private readonly IMongoCollection<Room> _roomCollection;
         private readonly IMongoCollection<User> _userCollection;
+        private readonly IMongoCollection<Invoice> _invoiceCollection;
         private readonly IValidator<ContractRequest> _validator;
         private readonly IMapper _mapper;
         private readonly ActivityLogService _activityLogService;
@@ -38,6 +39,7 @@ namespace SmartBoardingHouse.Controllers
             _contractCollection = db.GetCollection<Contract>("contracts");
             _roomCollection = db.GetCollection<Room>("rooms");
             _userCollection = db.GetCollection<User>("users");
+            _invoiceCollection = db.GetCollection<Invoice>("invoices");
             _validator = validator;
             _mapper = mapper;
             _activityLogService = activityLogService;
@@ -171,6 +173,14 @@ namespace SmartBoardingHouse.Controllers
             if (contract.Status != ContractStatus.Active)
                 return BadRequest(CommonMessage.ContractStatusNotActive());
 
+            // Kiểm tra các hóa đơn chưa thanh toán
+            var unpaidInvoices = await _invoiceCollection
+                .Find(x => x.ContractId == id && x.Status != InvoiceStatus.Paid)
+                .AnyAsync();
+
+            if (unpaidInvoices)
+                return BadRequest("Không thể thanh lý hợp đồng vì còn hóa đơn chưa thanh toán.");
+            
             await _contractCollection.UpdateOneAsync(
                 x => x.Id == id,
                 Builders<Contract>.Update

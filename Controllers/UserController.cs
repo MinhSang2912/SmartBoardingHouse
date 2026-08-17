@@ -10,6 +10,7 @@ using SmartBoardingHouse.Models.Entity;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Models.Settings;
+using SmartBoardingHouse.Services;
 using static SmartBoardingHouse.Common.Enums;
 using Message = SmartBoardingHouse.Common.Message;
 
@@ -25,12 +26,14 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<Contract> _contractCollection;
         private readonly IValidator<UserRequest> _validator;
         private readonly IOptions<AdminSettings> _adminSettings;
+        private readonly PhotoService _photoService;
         private readonly IMapper _mapper;
 
         public UsersController(
             MongoDbService mongoService,
             IValidator<UserRequest> validator,
             IOptions<AdminSettings> adminSettings,
+            PhotoService photoService,
             IMapper mapper)
         {
             var db = mongoService.GetDatabase();
@@ -39,6 +42,7 @@ namespace SmartBoardingHouse.Controllers
             _contractCollection = db.GetCollection<Contract>("contracts");
             _validator = validator;
             _adminSettings = adminSettings;
+            _photoService = photoService;
             _mapper = mapper;
         }
 
@@ -73,7 +77,8 @@ namespace SmartBoardingHouse.Controllers
 
         // POST: api/Users
         [HttpPost]
-        public async Task<ActionResult<UserResponse>> Create(UserRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<UserResponse>> Create([FromForm] UserRequest request)
         {
             var validationResult = await _validator.ValidateAsync(request);
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
@@ -90,6 +95,13 @@ namespace SmartBoardingHouse.Controllers
             user.Role = "Tenant";
             user.CreatedAt = DateTime.UtcNow;
 
+            var temp = request.IDCard;
+            // Upload ảnh
+            if (request.FrontImage != null)
+                user.FrontImageUrl = await _photoService.SaveFrontIdCardAsync(request.FrontImage, temp);
+            if (request.BackImage != null)
+                user.BackImageUrl = await _photoService.SaveBackIdCardAsync(request.BackImage, temp);
+
             await _collection.InsertOneAsync(user);
 
             return CreatedAtAction(nameof(GetById), new { id = user.Id },
@@ -98,7 +110,8 @@ namespace SmartBoardingHouse.Controllers
 
         // PUT: api/Users/{id}
         [HttpPut("{id}")]
-        public async Task<ActionResult<UserResponse>> Update(string id, UserRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<UserResponse>> Update(string id, [FromForm] UserRequest request)
         {
             var validationResult = await _validator.ValidateAsync(request);
             if (!validationResult.IsValid)
@@ -114,8 +127,30 @@ namespace SmartBoardingHouse.Controllers
             if (existingUser is null)
                 return NotFound(Message.NotFound("Người dùng"));
 
+            // Map các field text (Name, Email, PhoneNumber, IDCard, Address, DateOfBirth...)
             _mapper.Map(request, existingUser);
+
             existingUser.UpdatedAt = DateTime.UtcNow;
+
+            // Chỉ hash password khi client gửi mật khẩu mới
+            if (!string.IsNullOrWhiteSpace(request.Password))
+            {
+                existingUser.Password = PasswordHelper.Hash(request.Password);
+            }
+
+            var temp = request.IDCard;
+            // Xử lý ảnh riêng
+            if (request.FrontImage != null)
+            {
+                await _photoService.DeletePhotoAsync(existingUser.FrontImageUrl);
+                existingUser.FrontImageUrl = await _photoService.SaveFrontIdCardAsync(request.FrontImage, temp);
+            }
+
+            if (request.BackImage != null)
+            {
+                await _photoService.DeletePhotoAsync(existingUser.BackImageUrl);
+                existingUser.BackImageUrl = await _photoService.SaveBackIdCardAsync(request.BackImage, temp);
+            }
 
             await _collection.ReplaceOneAsync(x => x.Id == id, existingUser);
 

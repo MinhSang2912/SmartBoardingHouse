@@ -12,6 +12,10 @@ namespace SmartBoardingHouse.Mappings
             CreateMap<UserRequest, User>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())         
                 .ForMember(dest => dest.Password, opt => opt.Ignore())
+                .ForMember(dest => dest.Password, opt => opt.Ignore())
+                .ForMember(dest => dest.AvatarUrl, opt => opt.Ignore())      
+                .ForMember(dest => dest.FrontImageUrl, opt => opt.Ignore())     
+                .ForMember(dest => dest.BackImageUrl, opt => opt.Ignore())
                 .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src =>
                     src.DateOfBirth.HasValue
                         ? DateTime.SpecifyKind(src.DateOfBirth.Value.Date, DateTimeKind.Utc)

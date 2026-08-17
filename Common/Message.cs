@@ -9,6 +9,7 @@
         public static string IsExists(string entity) => $"{entity} này đã tồn tại.";
         public static string InvalidId() => "Id không hợp lệ.";
         public static string DescriptionTooLong() => "Mô tả quá dài.";
+        public static string ImageTooLong() => "Ảnh không được vượt quá 5MB";
 
         #region User
         public static string UserIdIsRequired() => "Id là bắt buộc.";

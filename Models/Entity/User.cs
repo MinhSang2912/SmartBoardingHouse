@@ -64,5 +64,11 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("role")]
         public string Role { get; set; } = "Tenant";
+
+        [BsonElement("frontImage")]
+        public string? FrontImageUrl { get; set; }
+
+        [BsonElement("backImage")]
+        public string? BackImageUrl { get; set; }
     }
 }

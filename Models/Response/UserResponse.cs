@@ -16,11 +16,13 @@ namespace SmartBoardingHouse.Models.Response
         public string? Role { get; set; }
 
         // === Thông tin phòng đang thuê ===
-        public int ActiveRoomCount { get; set; }                      // Số phòng đang thuê
-        public List<string> ActiveRoomNumbers { get; set; } = new();  // Danh sách số phòng (P101, P205,...)
-        public List<string> ActiveRoomIds { get; set; } = new();      // Danh sách RoomId (nếu cần)
+        public int ActiveRoomCount { get; set; }                     
+        public List<string> ActiveRoomNumbers { get; set; } = new();  
+        public List<string> ActiveRoomIds { get; set; } = new();      
 
         // Giữ lại để tương thích frontend cũ (hiển thị dạng chuỗi)
         public string RoomNumber { get; set; } = "Chưa có phòng";
+        public string? FrontImageUrl { get; set; }
+        public string? BackImageUrl { get; set; }
     }
 }

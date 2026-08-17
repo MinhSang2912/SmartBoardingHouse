@@ -13,6 +13,10 @@ namespace SmartBoardingHouse.Models.Request
         public string IDCard { get; set; } = string.Empty;
         public string? Address {get; set; }
         public DateTime? DateOfBirth { get; set; }
+
+        // Thêm ảnh
+        public IFormFile? FrontImage { get; set; }
+        public IFormFile? BackImage { get; set; }
     }
 
     public class UserRequestValidation : AbstractValidator<UserRequest>
@@ -27,6 +31,11 @@ namespace SmartBoardingHouse.Models.Request
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage(Message.LoginEmailIsRequired())
                 .EmailAddress().WithMessage(Message.LoginEmailIsInvalid());
+            RuleFor(x => x.FrontImage).Must(f => f == null || f.Length < 5 * 1024 * 1024)
+                 .WithMessage(Message.ImageTooLong());
+            RuleFor(x => x.BackImage).Must(f => f == null || f.Length < 5 * 1024 * 1024)
+                 .WithMessage(Message.ImageTooLong());
+                
         }
     }
 }

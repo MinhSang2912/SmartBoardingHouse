@@ -79,5 +79,11 @@
             Message = 4,
             Contract = 5
         }
+
+        public enum InvoiceType
+        {
+            Rent = 0,
+            Deposit = 1
+        }
     }
 }

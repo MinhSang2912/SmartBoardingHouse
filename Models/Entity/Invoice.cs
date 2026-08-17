@@ -72,6 +72,15 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("status")]
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unpaid;
+
+        [BsonElement("depositAmount")]
+        public int DepositAmout { get; set; } = 0;
+
+        [BsonElement("depositRefundNoticeSent")]
+        public bool DepositRefund { get; set; } = false;
+
+        [BsonElement("type")]
+        public InvoiceType Type { get; set; } = InvoiceType.Rent;
     }
 
     public class InvoiceItem
