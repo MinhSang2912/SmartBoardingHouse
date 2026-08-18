@@ -82,6 +82,8 @@
         public static string InvoiceItemNameIsRequired() => "Tên mục hóa đơn là bắt buộc.";
         public static string InvoiceItemPriceMustBeGreaterThanZero() => "Giá mục hóa đơn phải lớn hơn 0.";
         public static string InvoiceItemQuantityMustBeGreaterThanZero() => "Số lượng mục hóa đơn phải lớn hơn 0.";
+        public static string RoomDepositMustBeGreaterThanZero() => "Tiền đặt cọc phải lớn hơn 0.";
+
         #endregion
 
         #region MaintenanceRequest
