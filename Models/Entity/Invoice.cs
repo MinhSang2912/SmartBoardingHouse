@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using SmartBoardingHouse.Common;
@@ -40,6 +40,9 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("roomPrice")]
         public decimal RoomPrice { get; set; }
+
+        [BsonElement("roomDeposit")]
+        public decimal RoomDeposit { get; set; }
 
         [BsonElement("electricUsage")]
         public double ElectricUsage { get; set; }

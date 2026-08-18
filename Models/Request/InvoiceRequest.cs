@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using SmartBoardingHouse.Models.Entity;
 using Message = SmartBoardingHouse.Common.Message;
 
@@ -13,6 +13,7 @@ namespace SmartBoardingHouse.Models.Request
         public int BillingMonth { get; set; }
         public int BillingYear { get; set; }
         public decimal RoomPrice { get; set; }
+        public decimal RoomDeposit { get; set; }
         public double ElectricUsage { get; set; }
         public decimal ElectricPrice { get; set; }
         public double WaterUsage { get; set; }
@@ -46,6 +47,8 @@ namespace SmartBoardingHouse.Models.Request
                 .GreaterThan(2000).WithMessage(Message.InvoiceBillingYearIsInvalid());
             RuleFor(x => x.RoomPrice)
                 .GreaterThan(0).WithMessage(Message.RoomPriceMustBeGreaterThanZero());
+            RuleFor(x => x.RoomDeposit)
+                .GreaterThanOrEqualTo(0).WithMessage(Message.RoomDepositMustBeGreaterThanZero());
             RuleFor(x => x.ElectricUsage)
                 .GreaterThanOrEqualTo(0).WithMessage(Message.ElectricUsageIsInvalid());
             RuleFor(x => x.ElectricPrice)

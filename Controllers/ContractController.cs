@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -78,12 +78,14 @@ namespace SmartBoardingHouse.Controllers
         {
             var errors = await ValidateRequest(request);
 
+            var contractNumber = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+
             // Kiểm tra số hợp đồng trùng
             var contractExists = await _contractCollection
-                .Find(x => x.ContractNumber == request.ContractNumber)
+                .Find(x => x.ContractNumber == contractNumber)
                 .AnyAsync();
             if (contractExists)
-                return BadRequest(CommonMessage.ContractNumberExists(request.ContractNumber));
+                return BadRequest(CommonMessage.ContractNumberExists(contractNumber));
 
             // Tìm phòng theo RoomNumber
             var room = await _roomCollection
@@ -117,6 +119,7 @@ namespace SmartBoardingHouse.Controllers
                 return BadRequest(errors);
 
             var contract = _mapper.Map<Contract>(request);
+            contract.ContractNumber = contractNumber;
             contract.CreatedAt = DateTime.UtcNow;
             contract.Status = ContractStatus.Active;
             contract.SignedDate = DateTime.UtcNow;

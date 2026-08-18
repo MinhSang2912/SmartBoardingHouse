@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using SmartBoardingHouse.Common;
 using static SmartBoardingHouse.Common.Enums;
 
@@ -6,7 +6,6 @@ namespace SmartBoardingHouse.Models.Request
 {
     public class ContractRequest
     {
-        public string ContractNumber { get; set; } = string.Empty;
         public string RoomNumber { get; set; } = string.Empty;
         public string TenantName { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
@@ -19,8 +18,6 @@ namespace SmartBoardingHouse.Models.Request
     {
         public ContractRequestValidation()
         {
-           RuleFor(x => x.ContractNumber)
-                .NotEmpty().WithMessage(Message.ContractNumberIsRequired());
            RuleFor(x => x.RoomNumber)
                 .NotEmpty().WithMessage(Message.ContractRoomNumberIsRequired());
            RuleFor(x => x.TenantName)

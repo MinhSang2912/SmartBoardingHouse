@@ -15,9 +15,11 @@ namespace SmartBoardingHouse.Models.Response
         public InvoiceStatus Status { get; set; }
         public string StatusLabel { get; set; } = string.Empty;
         public decimal PaidAmount { get; set; }
+        public InvoiceType Type { get; set; }
 
         // Chi tiết thanh toán
         public decimal RoomPrice { get; set; }
+        public decimal RoomDeposit { get; set; }
         public double ElectricUsage { get; set; }
         public decimal ElectricPrice { get; set; }
         public decimal ElectricTotal { get; set; }

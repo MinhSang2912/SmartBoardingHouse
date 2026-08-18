@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -110,6 +110,7 @@ namespace SmartBoardingHouse.Controllers
             invoice.ContractId = contractExists.Id;
             invoice.TenantId = userExists.Id;
             invoice.RoomId = roomExists.Id;
+            invoice.RoomDeposit = request.RoomDeposit > 0 ? request.RoomDeposit : roomExists.RoomDeposit;
 
             var amont = invoice.RoomPrice + (decimal)invoice.ElectricUsage * invoice.ElectricPrice + (decimal)invoice.WaterUsage * invoice.WaterPrice + invoice.ServiceFee;
             if (request.Items != null && request.Items.Length > 0)
@@ -329,6 +330,8 @@ namespace SmartBoardingHouse.Controllers
                 .Find(x => x.Id == invoice.RoomId)
                 .FirstOrDefaultAsync();
             response.RoomNumber = room?.RoomNumber ?? "Không tìm thấy";
+            response.RoomDeposit = invoice.RoomDeposit > 0 ? invoice.RoomDeposit : (room?.RoomDeposit ?? 0);
+            response.Type = invoice.Type;
 
             var tenant = await _userCollection
                 .Find(x => x.Id == invoice.TenantId)
