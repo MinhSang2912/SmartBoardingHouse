@@ -1,17 +1,16 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using SmartBoardingHouse.Common;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Request
 {
     public class MeterReadingRequest
     {
         public string RoomNumber { get; set; } = string.Empty;
-        public int Month { get; set; }
-        public int Year { get; set; }
-        public double ElectricityIndex { get; set; }
-        public double WaterIndex { get; set; }
-        public IFormFile? Photo { get; set; }   
+        public double MeterIndex { get; set; }     
+        public MeterType Type { get; set; }         
+        public IFormFile? Photo { get; set; }
     }
 
     public class MeterReadingRequestValidation : AbstractValidator<MeterReadingRequest>
@@ -20,21 +19,14 @@ namespace SmartBoardingHouse.Models.Request
         {
             RuleFor(x => x.RoomNumber)
                 .NotEmpty().WithMessage(Message.MeterReadingRoomNumberIsRequired());
-            RuleFor(x => x.Month)
-                .InclusiveBetween(1, 12).WithMessage(Message.MeterReadingMonthIsInvalid());
-            RuleFor(x => x.Year)
-                .GreaterThan(2000).WithMessage("Năm không hợp lệ.");
-            RuleFor(x => x.ElectricityIndex)
+            RuleFor(x => x.MeterIndex)
                 .GreaterThanOrEqualTo(0).WithMessage(Message.MeterReadingElectricityIndexMustBeNonNegative());
-            RuleFor(x => x.WaterIndex)
-                .GreaterThanOrEqualTo(0).WithMessage(Message.MeterReadingWaterIndexMustBeNonNegative());
-
-            // Validate ảnh nếu có
+            RuleFor(x => x.Type)
+                .IsInEnum().WithMessage("Loại công tơ không hợp lệ.");
             RuleFor(x => x.Photo)
-                .Must(photo => photo == null || photo.Length <= 5 * 1024 * 1024)
+                .Must(p => p == null || p.Length <= 5 * 1024 * 1024)
                 .WithMessage("Ảnh không được vượt quá 5MB.")
-                .Must(photo => photo == null || new[] { "image/jpeg", "image/png", "image/jpg" }
-                    .Contains(photo.ContentType))
+                .Must(p => p == null || new[] { "image/jpeg", "image/png", "image/jpg" }.Contains(p.ContentType))
                 .WithMessage("Chỉ chấp nhận ảnh JPG hoặc PNG.");
         }
     }
