@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +22,7 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMongoCollection<Floor> _floorCollection;
         private readonly IMongoCollection<Contract> _contractCollection;
         private readonly IMongoCollection<User> _userCollection;
+        private readonly IMongoCollection<ItemFee> _itemFeeCollection;
         private readonly IValidator<RoomRequest> _validator;
         private readonly IMapper _mapper;
 
@@ -35,21 +36,47 @@ namespace SmartBoardingHouse.Controllers
             _floorCollection = db.GetCollection<Floor>("floors");
             _contractCollection = db.GetCollection<Contract>("contracts");
             _userCollection = db.GetCollection<User>("users");
+            _itemFeeCollection = db.GetCollection<ItemFee>("itemfees");
             _validator = validator;
             _mapper = mapper;
         }
 
         // GET: api/Rooms
         [HttpGet]
-        public async Task<ActionResult<List<RoomResponse>>> GetAll()
+        public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
-            var rooms = await _collection.Find(_=>true).ToListAsync();
-            var result = new List<RoomResponse>();
-            foreach (var room in rooms)
+            if (page.HasValue && limit.HasValue)
             {
-                result.Add(await MapToResponseAsync(room));
+                int p = page.Value < 1 ? 1 : page.Value;
+                int l = limit.Value < 1 ? 10 : limit.Value;
+                var total = await _collection.CountDocumentsAsync(_ => true);
+                var rooms = await _collection.Find(_ => true)
+                    .Skip((p - 1) * l)
+                    .Limit(l)
+                    .ToListAsync();
+                var result = new List<RoomResponse>();
+                foreach (var room in rooms)
+                {
+                    result.Add(await MapToResponseAsync(room));
+                }
+                return Ok(new PagedResult<RoomResponse>
+                {
+                    Total = (int)total,
+                    Page = p,
+                    Limit = l,
+                    Items = result
+                });
             }
-            return Ok(result);
+            else
+            {
+                var rooms = await _collection.Find(_=>true).ToListAsync();
+                var result = new List<RoomResponse>();
+                foreach (var room in rooms)
+                {
+                    result.Add(await MapToResponseAsync(room));
+                }
+                return Ok(result);
+            }
         }
 
         // GET: api/Rooms/{id}
@@ -188,6 +215,21 @@ namespace SmartBoardingHouse.Controllers
         private async Task<RoomResponse> MapToResponseAsync(Room room)
         {
             var response = _mapper.Map<RoomResponse>(room);
+
+            if (room.Amenities != null && room.Amenities.Any())
+            {
+                var matchingFees = await _itemFeeCollection
+                    .Find(f => room.Amenities.Contains(f.Type) && f.IsActive)
+                    .ToListAsync();
+
+                response.Amenities = matchingFees.Select(f => new RoomAmenityResponse
+                {
+                    Name = f.Name,
+                    Price = f.Price,
+                    Unit = f.Unit,
+                    Type = f.Type
+                }).ToList();
+            }
 
             // Lấy Floor theo Id
             if (!string.IsNullOrEmpty(room.FloorId))

@@ -17,5 +17,14 @@ namespace SmartBoardingHouse.Models.Response
         public RoomStatus Status { get; set; }
         public string StatusLabel { get; set; } = string.Empty;
         public string? TenantName { get; set; }
+        public List<RoomAmenityResponse> Amenities { get; set; } = new();
+    }
+
+    public class RoomAmenityResponse
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
     }
 }

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -45,13 +45,33 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/MeterReadings
         [HttpGet]
-        public async Task<ActionResult<List<MeterReadingResponse>>> GetAll()
+        public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
-            var readings = await _collection
-                .Find(_ => true)
-                .ToListAsync();
-
-            return Ok(await MapToResponseListAsync(readings));
+            if (page.HasValue && limit.HasValue)
+            {
+                int p = page.Value < 1 ? 1 : page.Value;
+                int l = limit.Value < 1 ? 10 : limit.Value;
+                var total = await _collection.CountDocumentsAsync(_ => true);
+                var readings = await _collection.Find(_ => true)
+                    .Skip((p - 1) * l)
+                    .Limit(l)
+                    .ToListAsync();
+                var responses = await MapToResponseListAsync(readings);
+                return Ok(new PagedResult<MeterReadingResponse>
+                {
+                    Total = (int)total,
+                    Page = p,
+                    Limit = l,
+                    Items = responses
+                });
+            }
+            else
+            {
+                var readings = await _collection
+                    .Find(_ => true)
+                    .ToListAsync();
+                return Ok(await MapToResponseListAsync(readings));
+            }
         }
 
         // GET: api/MeterReadings/{id}

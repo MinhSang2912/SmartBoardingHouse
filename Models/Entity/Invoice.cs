@@ -9,6 +9,7 @@ namespace SmartBoardingHouse.Models.Entity
     /// <summary>
     /// Bảng Invoice lưu trữ thông tin về các hóa đơn thanh toán của người thuê phòng.
     /// </summary>
+    [BsonIgnoreExtraElements]
     public class Invoice : BaseModel
     {
         [BsonElement("invoiceNumber")]
@@ -90,6 +91,7 @@ namespace SmartBoardingHouse.Models.Entity
         public string? ReceiptImage { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class InvoiceItem
     {
         [BsonElement("name")]

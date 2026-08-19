@@ -245,7 +245,7 @@ namespace SmartBoardingHouse.Controllers
             ChangeStatusAsync(
                 id,
                 newStatus: InvoiceStatus.Cancelled,
-                allowedCurrentStatuses: new[] { InvoiceStatus.Pending },
+                allowedCurrentStatuses: new[] { InvoiceStatus.Pending, InvoiceStatus.Unpaid },
                 notificationTitle: "Hóa đơn đã bị hủy",
                 notificationBody: invoice => $"Hóa đơn {invoice.InvoiceNumber} đã bị hủy.");
 
@@ -311,18 +311,14 @@ namespace SmartBoardingHouse.Controllers
             response.ElectricTotal = (decimal)response.ElectricUsage * response.ElectricPrice;
             response.WaterTotal = (decimal)response.WaterUsage * response.WaterPrice;
 
-            var effectiveStatus = invoice.Status == InvoiceStatus.Pending && invoice.DueDate < DateTime.Now
-                ? InvoiceStatus.Overdue
-                : invoice.Status;
-            response.Status = effectiveStatus;
-            response.StatusLabel = effectiveStatus switch
+            response.Status = invoice.Status;
+            response.StatusLabel = invoice.Status switch
             {
                 InvoiceStatus.Paid => "Đã thanh toán",
                 InvoiceStatus.Unpaid => "Chờ thanh toán",
                 InvoiceStatus.Pending => "Đang xử lý",
                 InvoiceStatus.Cancelled => "Đã hủy",
-                InvoiceStatus.Overdue => "Quá hạn",
-                _ => effectiveStatus.ToString()
+                _ => invoice.Status.ToString()
             };
             response.BillingPeriod = "Tháng " + invoice.BillingMonth + "/" + invoice.BillingYear;
 

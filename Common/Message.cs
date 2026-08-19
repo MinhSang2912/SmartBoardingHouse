@@ -1,4 +1,4 @@
-﻿namespace SmartBoardingHouse.Common
+namespace SmartBoardingHouse.Common
 {
     public class Message
     {
@@ -157,6 +157,13 @@
         public static string NotificationBodyTooLong() => "Nội dung tối đa 1000 ký tự";
         public static string NotificationNotFound() => "Không tìm thấy thông báo";
         public static string NotificationMarkReadFailed() => "Đánh dấu thông báo đã đọc thất bại";
+        #endregion
+
+        #region ItemFee
+        public static string ItemFeeNameIsRequired() => "Tên khoản phí là bắt buộc.";
+        public static string ItemFeePriceMustBeNonNegative() => "Số tiền phải lớn hơn hoặc bằng 0.";
+        public static string ItemFeeUnitIsRequired() => "Đơn vị tính là bắt buộc.";
+        public static string ItemFeeTypeIsInvalid() => "Loại phí áp dụng không hợp lệ.";
         #endregion
     }
 }

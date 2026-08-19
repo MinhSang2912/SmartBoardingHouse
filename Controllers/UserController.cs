@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,13 +28,15 @@ namespace SmartBoardingHouse.Controllers
         private readonly IOptions<AdminSettings> _adminSettings;
         private readonly PhotoService _photoService;
         private readonly IMapper _mapper;
+        private readonly EmailService _emailService;
 
         public UsersController(
             MongoDbService mongoService,
             IValidator<UserRequest> validator,
             IOptions<AdminSettings> adminSettings,
             PhotoService photoService,
-            IMapper mapper)
+            IMapper mapper,
+            EmailService emailService)
         {
             var db = mongoService.GetDatabase();
             _collection = db.GetCollection<User>("users");
@@ -44,21 +46,45 @@ namespace SmartBoardingHouse.Controllers
             _adminSettings = adminSettings;
             _photoService = photoService;
             _mapper = mapper;
+            _emailService = emailService;
         }
 
         // GET: api/Users
         [HttpGet]
-        public async Task<ActionResult<List<UserResponse>>> GetAll()
+        public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
-            var users = await _collection.Find(x => x.Role != "Admin").ToListAsync();
-            var result = new List<UserResponse>();
-
-            foreach (var user in users)
+            if (page.HasValue && limit.HasValue)
             {
-                result.Add(await MapToResponseAsync(user));
+                int p = page.Value < 1 ? 1 : page.Value;
+                int l = limit.Value < 1 ? 10 : limit.Value;
+                var total = await _collection.CountDocumentsAsync(x => x.Role != "Admin");
+                var users = await _collection.Find(x => x.Role != "Admin")
+                    .Skip((p - 1) * l)
+                    .Limit(l)
+                    .ToListAsync();
+                var result = new List<UserResponse>();
+                foreach (var user in users)
+                {
+                    result.Add(await MapToResponseAsync(user));
+                }
+                return Ok(new PagedResult<UserResponse>
+                {
+                    Total = (int)total,
+                    Page = p,
+                    Limit = l,
+                    Items = result
+                });
             }
-
-            return Ok(result);
+            else
+            {
+                var users = await _collection.Find(x => x.Role != "Admin").ToListAsync();
+                var result = new List<UserResponse>();
+                foreach (var user in users)
+                {
+                    result.Add(await MapToResponseAsync(user));
+                }
+                return Ok(result);
+            }
         }
 
         // GET: api/Users/{id}
@@ -103,6 +129,19 @@ namespace SmartBoardingHouse.Controllers
                 user.BackImageUrl = await _photoService.SaveBackIdCardAsync(request.BackImage, temp);
 
             await _collection.InsertOneAsync(user);
+
+            // Gửi thông tin tài khoản qua email trong tác vụ nền (fire-and-forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendTenantAccountAsync(user.Email, user.Name, request.Password);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Email Error] Lỗi gửi email tới {user.Email}: {ex.Message}");
+                }
+            });
 
             return CreatedAtAction(nameof(GetById), new { id = user.Id },
                 await MapToResponseAsync(user));

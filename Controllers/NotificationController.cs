@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -85,6 +85,10 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet("all")]
         public async Task<IActionResult> GetAllNotifications()
         {
+            var totalCount = await _notificationCollection.CountDocumentsAsync(Builders<Notification>.Filter.Empty);
+            var unreadCount = await _notificationCollection.CountDocumentsAsync(Builders<Notification>.Filter.Ne(n => n.IsReadAdmin, true));
+            var readCount = await _notificationCollection.CountDocumentsAsync(Builders<Notification>.Filter.Eq(n => n.IsReadAdmin, true));
+
             var notifications = await _notificationCollection
                 .Find(Builders<Notification>.Filter.Empty)
                 .SortByDescending(n => n.CreatedAt)
@@ -92,9 +96,11 @@ namespace SmartBoardingHouse.Controllers
 
             var response = new NotificationListResponse
             {
-                TotalCount = notifications.Count,
-                UnreadCount = notifications.Count(n => !n.IsReadAdmin),
-                ReadCount = notifications.Count(n => n.IsReadAdmin),
+                TotalCount = (int)totalCount,
+                UnreadCount = (int)unreadCount,
+                ReadCount = (int)readCount,
+                Page = 1,
+                PageSize = notifications.Count,
                 Data = _mapper.Map<List<NotificationResponse>>(notifications)
             };
 
@@ -186,7 +192,7 @@ namespace SmartBoardingHouse.Controllers
                 .Set(n => n.UpdatedAt, DateTime.UtcNow);
 
             await _notificationCollection.UpdateManyAsync(
-                n => !n.IsReadAdmin, update);
+                Builders<Notification>.Filter.Ne(n => n.IsReadAdmin, true), update);
 
             return Ok(new { message = "Đã đánh dấu tất cả thông báo là đã đọc" });
         }

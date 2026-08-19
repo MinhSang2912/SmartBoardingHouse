@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.FileProviders;
@@ -97,6 +97,7 @@ builder.Services.AddScoped<IValidator<RoomRequest>, RoomRequestValidation>();
 builder.Services.AddScoped<IValidator<UserRequest>, UserRequestValidation>();
 builder.Services.AddScoped<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
 builder.Services.AddScoped<IValidator<NotificationRequest>, NotificationRequestValidator>();
+builder.Services.AddScoped<IValidator<ItemFeeRequest>, ItemFeeRequestValidator>();
 
 // ====================== AUTOMAPPER ======================
 var mapperConfig = new MapperConfiguration(cfg =>
@@ -110,6 +111,7 @@ var mapperConfig = new MapperConfiguration(cfg =>
     cfg.AddProfile<MaintenanceMappingProfile>();
     cfg.AddProfile<MessageMappingProfile>();
     cfg.AddProfile<NotificationMappingProfile>();
+    cfg.AddProfile<ItemFeeMappingProfile>();
 }, NullLoggerFactory.Instance);
 builder.Services.AddSingleton(mapperConfig.CreateMapper());
 
@@ -123,6 +125,7 @@ builder.Services.AddScoped<ActivityLogService>(sp =>
 
 builder.Services.AddSingleton<PhotoService>();
 builder.Services.AddSingleton<JwtService>();
+builder.Services.AddSingleton<EmailService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ====================== JWT AUTHENTICATION ======================
@@ -216,15 +219,12 @@ var dataSeeder = new DataSeeder(mongoService.GetDatabase(), adminSettings);
 await dataSeeder.SeedAsync();
 
 // ====================== MIDDLEWARE ======================
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "SmartBoardingHouse API v1");
-        c.RoutePrefix = string.Empty;
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "SmartBoardingHouse API v1");
+    c.RoutePrefix = string.Empty;
+});
 
 // Serve ảnh từ thư mục Images
 var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "Images");

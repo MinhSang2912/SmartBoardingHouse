@@ -1,4 +1,4 @@
-﻿namespace SmartBoardingHouse.Common
+namespace SmartBoardingHouse.Common
 {
     public class Enums
     {
@@ -25,8 +25,7 @@
             Paid = 1,
             Cancelled = 2,
             Unpaid = 3,
-            Overdue = 4,
-            Partial = 5
+            Overdue = 4
         }
         public enum MaintenanceStatus
         {

@@ -27,13 +27,15 @@ namespace SmartBoardingHouse.Controllers
         private readonly IMapper _mapper;
         private readonly ActivityLogService _activityLogService;
         private readonly INotificationService _notificationService;
+        private readonly EmailService _emailService;
 
         public ContractsController(
             MongoDbService mongoService,
             IValidator<ContractRequest> validator,
             IMapper mapper,
             ActivityLogService activityLogService,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            EmailService emailService)
         {
             var db = mongoService.GetDatabase();
             _contractCollection = db.GetCollection<Contract>("contracts");
@@ -44,21 +46,45 @@ namespace SmartBoardingHouse.Controllers
             _mapper = mapper;
             _activityLogService = activityLogService;
             _notificationService = notificationService;
+            _emailService = emailService;
         }
 
         // GET: api/Contracts
         [HttpGet]
-        public async Task<ActionResult<List<ContractResponse>>> GetAll()
+        public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
-            var contracts = await _contractCollection.Find(_ => true).ToListAsync();
-            var result = new List<ContractResponse>();
-
-            foreach (var contract in contracts)
+            if (page.HasValue && limit.HasValue)
             {
-                result.Add(await MapToResponseAsync(contract));
+                int p = page.Value < 1 ? 1 : page.Value;
+                int l = limit.Value < 1 ? 10 : limit.Value;
+                var total = await _contractCollection.CountDocumentsAsync(_ => true);
+                var contracts = await _contractCollection.Find(_ => true)
+                    .Skip((p - 1) * l)
+                    .Limit(l)
+                    .ToListAsync();
+                var result = new List<ContractResponse>();
+                foreach (var contract in contracts)
+                {
+                    result.Add(await MapToResponseAsync(contract));
+                }
+                return Ok(new PagedResult<ContractResponse>
+                {
+                    Total = (int)total,
+                    Page = p,
+                    Limit = l,
+                    Items = result
+                });
             }
-
-            return Ok(result);
+            else
+            {
+                var contracts = await _contractCollection.Find(_ => true).ToListAsync();
+                var result = new List<ContractResponse>();
+                foreach (var contract in contracts)
+                {
+                    result.Add(await MapToResponseAsync(contract));
+                }
+                return Ok(result);
+            }
         }
 
         // GET: api/Contracts/{id}
@@ -160,6 +186,31 @@ namespace SmartBoardingHouse.Controllers
                 type: NotificationType.Contract,
                 refId: contract.Id,
                 refModel: "Contract");
+
+            // Gửi email hợp đồng cho người thuê (fire-and-forget)
+            var tenantEmail = tenant.Email;
+            var tenantName = tenant.Name;
+            var roomNumber = room.RoomNumber;
+            var startDate = contract.StartDate.ToString("dd/MM/yyyy");
+            var endDate = contract.EndDate.ToString("dd/MM/yyyy");
+            var price = contract.Price.ToString("N0");
+            var deposit = contract.RoomDeposit.ToString("N0");
+            var contractNum = contract.ContractNumber;
+            var paymentDate = contract.PaymentDate;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendContractEmailAsync(
+                        tenantEmail, tenantName, contractNum, roomNumber,
+                        startDate, endDate, price, deposit, paymentDate);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Email Error] Lỗi gửi email hợp đồng tới {tenantEmail}: {ex.Message}");
+                }
+            });
 
             return CreatedAtAction(nameof(GetById), new { id = contract.Id },
                 await MapToResponseAsync(contract));

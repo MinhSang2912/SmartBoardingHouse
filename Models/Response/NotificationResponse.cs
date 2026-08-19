@@ -1,4 +1,4 @@
-﻿using static SmartBoardingHouse.Common.Enums;
+using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Response
 {
@@ -23,6 +23,8 @@ namespace SmartBoardingHouse.Models.Response
         public int TotalCount { get; set; }      // Tổng thông báo
         public int UnreadCount { get; set; }     // Chưa đọc (IsReadAdmin = false)
         public int ReadCount { get; set; }        // Đã đọc (IsReadAdmin = true)
+        public int Page { get; set; }
+        public int PageSize { get; set; }
         public List<NotificationResponse> Data { get; set; } = new();
     }
 }

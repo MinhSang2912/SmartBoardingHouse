@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using SmartBoardingHouse.Common;
 using static SmartBoardingHouse.Common.Enums;
 
@@ -13,6 +13,7 @@ namespace SmartBoardingHouse.Models.Request
         public int maxOccupants { get; set; } = 2;
         public string FloorId { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public List<string> Amenities { get; set; } = new();
     }
 
     public class RoomRequestValidation : AbstractValidator<RoomRequest>

@@ -25,6 +25,8 @@ namespace SmartBoardingHouse.Models.Response
         public int Pending { get; set; }
         public int InProgress { get; set; }
         public int Completed { get; set; }
+        public int Page { get; set; }
+        public int Limit { get; set; }
         public List<MaintenanceRequestResponse> Items { get; set; } = new();
     }
 }

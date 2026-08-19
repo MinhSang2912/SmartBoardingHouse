@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -46,21 +46,47 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/MaintenanceRequests
         [HttpGet]
-        public async Task<ActionResult<MaintenanceSummaryResponse>> GetAll()
+        public async Task<ActionResult<MaintenanceSummaryResponse>> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
-            var items = await _collection
-                .Find(_ => true)
-                .SortByDescending(x => x.CreatedAt)
-                .ToListAsync();
+            List<MaintenanceRequest> items;
+            int p = page ?? 1;
+            int l = limit ?? 10;
+
+            if (page.HasValue && limit.HasValue)
+            {
+                if (p < 1) p = 1;
+                if (l < 1) l = 10;
+
+                items = await _collection
+                    .Find(_ => true)
+                    .SortByDescending(x => x.CreatedAt)
+                    .Skip((p - 1) * l)
+                    .Limit(l)
+                    .ToListAsync();
+            }
+            else
+            {
+                items = await _collection
+                    .Find(_ => true)
+                    .SortByDescending(x => x.CreatedAt)
+                    .ToListAsync();
+            }
+
+            var totalCount = (int)await _collection.CountDocumentsAsync(_ => true);
+            var pendingCount = (int)await _collection.CountDocumentsAsync(x => x.Status == MaintenanceStatus.Pending);
+            var inProgressCount = (int)await _collection.CountDocumentsAsync(x => x.Status == MaintenanceStatus.Processing);
+            var completedCount = (int)await _collection.CountDocumentsAsync(x => x.Status == MaintenanceStatus.Completed);
 
             if (items.Count == 0)
             {
                 return Ok(new MaintenanceSummaryResponse
                 {
-                    Total = 0,
-                    Pending = 0,
-                    InProgress = 0,
-                    Completed = 0,
+                    Total = totalCount,
+                    Pending = pendingCount,
+                    InProgress = inProgressCount,
+                    Completed = completedCount,
+                    Page = p,
+                    Limit = l,
                     Items = new List<MaintenanceRequestResponse>()
                 });
             }
@@ -116,10 +142,12 @@ namespace SmartBoardingHouse.Controllers
 
             var summary = new MaintenanceSummaryResponse
             {
-                Total = mapped.Count,
-                Pending = mapped.Count(x => x.Status == MaintenanceStatus.Pending),
-                InProgress = mapped.Count(x => x.Status == MaintenanceStatus.Processing),
-                Completed = mapped.Count(x => x.Status == MaintenanceStatus.Completed),
+                Total = totalCount,
+                Pending = pendingCount,
+                InProgress = inProgressCount,
+                Completed = completedCount,
+                Page = p,
+                Limit = l,
                 Items = mapped
             };
 
