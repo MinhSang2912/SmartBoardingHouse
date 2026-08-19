@@ -56,7 +56,6 @@
 
         #region Invoice
         public static string InvoiceNumberExists() => "Số hóa đơn đã tồn tại.";
-        public static string InvoiceIsExists() => "Hóa đơn đã tồn tại.";
         public static string InvoiceNumberIsRequired() => "Số hóa đơn là bắt buộc.";
         public static string InvoiceRoomNumberIsRequired() => "Số phòng là bắt buộc.";
         public static string InvoiceDueDateIsRequired() => "Ngày đến hạn là bắt buộc.";
@@ -90,9 +89,8 @@
         public static string MeterReadingYearIsInvalid() => "Năm phải từ 2020 trở đi.";
         public static string MeterReadingElectricityIndexMustBeNonNegative() => "Chỉ số điện phải lớn hơn hoặc bằng 0.";
         public static string MeterReadingWaterIndexMustBeNonNegative() => "Chỉ số nước phải lớn hơn hoặc bằng 0.";
-        public static string MeterReadingAlreadyExists() => "Số công tơ này đã có";
-        public static string MeterReadingThisMonthMuchHighterLastMonth() => "Số tháng này phải lớn hơn số trước";
-        public static string MeterReadingRoomNotOccupied() => "Phòng này không có người thuê";
+        public static string MeterReadingAlreadyExists(string roomNumber, int month, int year) =>
+            $"Đã có chỉ số công tơ cho phòng '{roomNumber}' trong tháng {month}/{year}.";
         #endregion
     }
 }
