@@ -49,5 +49,11 @@
             CheckIn,     
             Maintenance 
         }
+
+        public enum MeterType
+        {
+            Electric = 0,
+            Water = 1
+        }
     }
 }
