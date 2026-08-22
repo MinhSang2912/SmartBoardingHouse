@@ -109,7 +109,7 @@ namespace SmartBoardingHouse.Controllers
 
             if (existingRoom != null)
             {
-                if (existingRoom.IsActive)
+                if (existingRoom.IsActive && existingRoom.Status != RoomStatus.InActive)
                 {
                     // Nếu phòng đang hoạt động mà trùng số thì báo lỗi đã tồn tại
                     errors.Add(CommonMessage.RoomNumberExists());
@@ -119,14 +119,15 @@ namespace SmartBoardingHouse.Controllers
             if (errors.Any())
                 return BadRequest(errors);
 
-            // Nếu phòng đã tồn tại nhưng IsActive = false thì tiến hành tái sử dụng (Update)
-            if (existingRoom != null && !existingRoom.IsActive)
+            // Nếu phòng đã tồn tại nhưng không hoạt động thì tiến hành tái sử dụng (Update) và kích hoạt lại
+            if (existingRoom != null && (!existingRoom.IsActive || existingRoom.Status == RoomStatus.InActive))
             {
                 // Map dữ liệu mới từ request vào phòng cũ
                 _mapper.Map(request, existingRoom);
 
                 // Kích hoạt lại phòng và cập nhật thời gian
                 existingRoom.IsActive = true;
+                existingRoom.Status = RoomStatus.Available;
                 existingRoom.UpdatedAt = DateTime.UtcNow;
 
                 await _collection.ReplaceOneAsync(x => x.Id == existingRoom.Id, existingRoom);
