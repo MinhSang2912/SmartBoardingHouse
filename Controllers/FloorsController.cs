@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -91,6 +91,13 @@ namespace SmartBoardingHouse.Controllers
 
             if (floorNumberExists)
                 errors.Add(CommonMessage.IsExists("Số Tầng"));
+
+            var floorNameExists = await _floorCollection
+                .Find(x => x.Name == request.Name)
+                .AnyAsync();
+
+            if (floorNameExists)
+                errors.Add(CommonMessage.IsExists("Tên Tầng"));
 
             if (errors.Any())
                 return BadRequest(errors);

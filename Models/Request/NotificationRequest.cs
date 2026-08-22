@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Components.Forms;
 using ValidationMessages = SmartBoardingHouse.Common.Message;
 using static SmartBoardingHouse.Common.Enums;
@@ -7,7 +7,7 @@ namespace SmartBoardingHouse.Models.Request
 {
     public class NotificationRequest
     {
-        public string TenantId { get; set; } = string.Empty;
+        public string? TenantId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Body { get; set; } = string.Empty;
         public NotificationType Type { get; set; } = NotificationType.General;
@@ -21,8 +21,7 @@ namespace SmartBoardingHouse.Models.Request
     {
         public NotificationRequestValidator()
         {
-            RuleFor(x => x.TenantId)
-                .NotEmpty().WithMessage(ValidationMessages.NotificationTenantIdRequired());
+
 
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage(ValidationMessages.NotificationTitleRequired())
