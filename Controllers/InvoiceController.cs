@@ -66,83 +66,83 @@ namespace SmartBoardingHouse.Controllers
             return Ok(await MapToResponse(invoice));
         }
 
-        // POST: api/Invoices
-        [HttpPost]
-        public async Task<ActionResult<InvoiceResponse>> Create(InvoiceRequest request)
-        {
-            var errors = await ValidateRequest(request);
+        // // POST: api/Invoices
+        // [HttpPost]
+        // public async Task<ActionResult<InvoiceResponse>> Create(InvoiceRequest request)
+        // {
+        //     var errors = await ValidateRequest(request);
 
-            var invoiceExists = await _collection
-                .Find(x => x.InvoiceNumber == request.InvoiceNumber)
-                .AnyAsync();
-            if (invoiceExists)
-                errors.Add(CommonMessage.InvoiceNumberExists());
+        //     var invoiceExists = await _collection
+        //         .Find(x => x.InvoiceNumber == request.InvoiceNumber)
+        //         .AnyAsync();
+        //     if (invoiceExists)
+        //         errors.Add(CommonMessage.InvoiceNumberExists());
 
-            var roomExists = await _roomCollection
-                .Find(x => x.RoomNumber == request.RoomNumber)
-                .FirstOrDefaultAsync();
-            if (roomExists is null)
-                errors.Add(CommonMessage.NotFound("Phòng"));
+        //     var roomExists = await _roomCollection
+        //         .Find(x => x.RoomNumber == request.RoomNumber)
+        //         .FirstOrDefaultAsync();
+        //     if (roomExists is null)
+        //         errors.Add(CommonMessage.NotFound("Phòng"));
 
-            var userExists = await _userCollection
-                .Find(x => x.Name == request.TenantName)
-                .FirstOrDefaultAsync();
-            if (userExists is null)
-                errors.Add(CommonMessage.NotFound("Người thuê"));
+        //     var userExists = await _userCollection
+        //         .Find(x => x.Name == request.TenantName)
+        //         .FirstOrDefaultAsync();
+        //     if (userExists is null)
+        //         errors.Add(CommonMessage.NotFound("Người thuê"));
 
-            var contractExists = await _contractCollection
-                .Find(x => x.ContractNumber == request.ContractNumber)
-                .FirstOrDefaultAsync();
-            if (contractExists is null)
-                errors.Add(CommonMessage.NotFound("Hợp đồng"));
+        //     var contractExists = await _contractCollection
+        //         .Find(x => x.ContractNumber == request.ContractNumber)
+        //         .FirstOrDefaultAsync();
+        //     if (contractExists is null)
+        //         errors.Add(CommonMessage.NotFound("Hợp đồng"));
 
-            if (errors.Any())
-                return BadRequest(errors);
+        //     if (errors.Any())
+        //         return BadRequest(errors);
 
-            if (userExists is null || contractExists is null || roomExists is null)
-                return BadRequest(CommonMessage.NotFound("Các dữ liệu liên quan"));
+        //     if (userExists is null || contractExists is null || roomExists is null)
+        //         return BadRequest(CommonMessage.NotFound("Các dữ liệu liên quan"));
 
-            if (roomExists.Price != request.RoomPrice)
-                return BadRequest(CommonMessage.RoomPriceMismatch());
+        //     if (roomExists.Price != request.RoomPrice)
+        //         return BadRequest(CommonMessage.RoomPriceMismatch());
 
-            var invoice = _mapper.Map<Invoice>(request);
-            invoice.CreatedAt = DateTime.UtcNow;
-            invoice.ContractId = contractExists.Id;
-            invoice.TenantId = userExists.Id;
-            invoice.RoomId = roomExists.Id;
-            invoice.RoomDeposit = request.RoomDeposit > 0 ? request.RoomDeposit : roomExists.RoomDeposit;
+        //     var invoice = _mapper.Map<Invoice>(request);
+        //     invoice.CreatedAt = DateTime.UtcNow;
+        //     invoice.ContractId = contractExists.Id;
+        //     invoice.TenantId = userExists.Id;
+        //     invoice.RoomId = roomExists.Id;
+        //     invoice.RoomDeposit = request.RoomDeposit > 0 ? request.RoomDeposit : roomExists.RoomDeposit;
 
-            var amont = invoice.RoomPrice + (decimal)invoice.ElectricUsage * invoice.ElectricPrice + (decimal)invoice.WaterUsage * invoice.WaterPrice + invoice.ServiceFee;
-            if (request.Items != null && request.Items.Length > 0)
-            {
-                foreach (var item in request.Items)
-                {
-                    var total = item.Quantity * item.UnitPrice;
-                    invoice.Items.Add(new InvoiceItem
-                    {
-                        Name = item.Name,
-                        UnitPrice = item.UnitPrice,
-                        Quantity = item.Quantity,
-                        Total = total
-                    });
-                    amont += total;
-                }
-            }
-            invoice.Amount = amont;
+        //     var amont = invoice.RoomPrice + (decimal)invoice.ElectricUsage * invoice.ElectricPrice + (decimal)invoice.WaterUsage * invoice.WaterPrice + invoice.ServiceFee;
+        //     if (request.Items != null && request.Items.Length > 0)
+        //     {
+        //         foreach (var item in request.Items)
+        //         {
+        //             var total = item.Quantity * item.UnitPrice;
+        //             invoice.Items.Add(new InvoiceItem
+        //             {
+        //                 Name = item.Name,
+        //                 UnitPrice = item.UnitPrice,
+        //                 Quantity = item.Quantity,
+        //                 Total = total
+        //             });
+        //             amont += total;
+        //         }
+        //     }
+        //     invoice.Amount = amont;
 
-            await _collection.InsertOneAsync(invoice);
+        //     await _collection.InsertOneAsync(invoice);
 
-            await _notificationService.CreateAsync(
-                tenantId: invoice.TenantId,
-                title: "Hóa đơn mới",
-                body: $"Hóa đơn {invoice.InvoiceNumber} tháng {invoice.BillingMonth}/{invoice.BillingYear} với số tiền {invoice.Amount:N0}đ đã được tạo. Hạn thanh toán: {invoice.DueDate:dd/MM/yyyy}.",
-                type: NotificationType.Invoice,
-                refId: invoice.Id,
-                refModel: "Invoice");
+        //     await _notificationService.CreateAsync(
+        //         tenantId: invoice.TenantId,
+        //         title: "Hóa đơn mới",
+        //         body: $"Hóa đơn {invoice.InvoiceNumber} tháng {invoice.BillingMonth}/{invoice.BillingYear} với số tiền {invoice.Amount:N0}đ đã được tạo. Hạn thanh toán: {invoice.DueDate:dd/MM/yyyy}.",
+        //         type: NotificationType.Invoice,
+        //         refId: invoice.Id,
+        //         refModel: "Invoice");
 
-            return CreatedAtAction(nameof(GetById), new { id = invoice.Id },
-                await MapToResponse(invoice));
-        }
+        //     return CreatedAtAction(nameof(GetById), new { id = invoice.Id },
+        //         await MapToResponse(invoice));
+        // }
 
         // PUT: api/Invoices/{id}
         //[HttpPut("{id}")]
@@ -216,16 +216,16 @@ namespace SmartBoardingHouse.Controllers
         }
 
         // DELETE: api/Invoices/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
-        {
-            var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
-            if (invoice is null)
-                return NotFound(CommonMessage.NotFound("Hóa đơn"));
+        // [HttpDelete("{id}")]
+        // public async Task<IActionResult> Delete(string id)
+        // {
+        //     var invoice = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+        //     if (invoice is null)
+        //         return NotFound(CommonMessage.NotFound("Hóa đơn"));
 
-            await _collection.DeleteOneAsync(x => x.Id == id);
-            return Ok(CommonMessage.Deleted("Hóa đơn"));
-        }
+        //     await _collection.DeleteOneAsync(x => x.Id == id);
+        //     return Ok(CommonMessage.Deleted("Hóa đơn"));
+        // }
 
         // ==================== STATUS TRANSITIONS ====================
 

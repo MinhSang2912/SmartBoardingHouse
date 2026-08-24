@@ -134,13 +134,6 @@ namespace SmartBoardingHouse.Controllers
             if (tenant is null)
                 return BadRequest(CommonMessage.NotFound("Người thuê"));
 
-            //// Người thuê đã có hợp đồng đang hiệu lực
-            //var activeContractForTenant = await _contractCollection
-            //    .Find(x => x.TenantId == tenant.Id && x.Status == ContractStatus.Active)
-            //    .AnyAsync();
-            //if (activeContractForTenant)
-            //    return BadRequest(CommonMessage.ContractTenantIsExists());
-
             if (errors.Any())
                 return BadRequest(errors);
 

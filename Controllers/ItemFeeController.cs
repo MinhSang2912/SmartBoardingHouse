@@ -120,7 +120,10 @@ namespace SmartBoardingHouse.Controllers
             if (fee is null)
                 return NotFound(CommonMessage.NotFound("Khoản phí phụ"));
 
-            await _collection.DeleteOneAsync(x => x.Id == id);
+            fee.IsActive = false;
+            fee.UpdatedAt = DateTime.UtcNow;
+
+            await _collection.ReplaceOneAsync(x => x.Id == id, fee);
             return Ok(CommonMessage.Deleted("Khoản phí phụ"));
         }
     }
