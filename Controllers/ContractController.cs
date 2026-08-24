@@ -104,7 +104,7 @@ namespace SmartBoardingHouse.Controllers
         {
             var errors = await ValidateRequest(request);
 
-            var contractNumber = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+            var contractNumber = "HD-" + DateTime.Now.ToString("yyyyMMddHHmmssfff");
 
             // Kiểm tra số hợp đồng trùng
             var contractExists = await _contractCollection
