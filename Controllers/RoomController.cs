@@ -205,6 +205,26 @@ namespace SmartBoardingHouse.Controllers
             return Ok(CommonMessage.Deleted("Phòng"));
         }
 
+        // PUT: api/Rooms/{id}/reactivate
+        [HttpPut("{id}/reactivate")]
+        public async Task<ActionResult<RoomResponse>> Reactivate(string id)
+        {
+            var room = await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (room is null)
+                return NotFound(CommonMessage.NotFound("Phòng"));
+
+            var update = Builders<Room>.Update
+                .Set(x => x.IsActive, true)
+                .Set(x => x.Status, RoomStatus.Available)
+                .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+            await _collection.UpdateOneAsync(x => x.Id == id, update);
+            room.IsActive = true;
+            room.Status = RoomStatus.Available;
+
+            return Ok(await MapToResponseAsync(room));
+        }
+
         // ==================== HELPERS ====================
 
         private async Task<List<string>> ValidateRequest(RoomRequest request)

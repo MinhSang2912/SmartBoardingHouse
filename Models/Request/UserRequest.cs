@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using SmartBoardingHouse.Common;
 using static SmartBoardingHouse.Common.Enums;
 
@@ -27,7 +27,11 @@ namespace SmartBoardingHouse.Models.Request
                .NotEmpty().WithMessage(Message.UserNameIsRequired());
             RuleFor(x => x.IDCard)
                 .NotEmpty().WithMessage(Message.UserIDCardNumberIsRequired())
+                .Matches(@"^[0-9]{12}$").WithMessage("Số CCCD không hợp lệ (phải là 12 chữ số từ 0-9)!")
                 .MinimumLength(10).WithMessage(Message.UserIDCardNumberIsTooShort());
+            RuleFor(x => x.PhoneNumber)
+                .NotEmpty().WithMessage("Số điện thoại không được để trống!")
+                .Matches(@"^[0-9]{10,11}$").WithMessage("Số điện thoại không hợp lệ (phải là 10 - 11 số)!");
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage(Message.LoginEmailIsRequired())
                 .EmailAddress().WithMessage(Message.LoginEmailIsInvalid());

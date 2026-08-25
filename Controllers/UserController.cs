@@ -225,6 +225,28 @@ namespace SmartBoardingHouse.Controllers
             return Ok(Message.Deleted("Người dùng"));
         }
 
+        // PUT: api/Users/{id}/reactivate
+        [HttpPut("{id}/reactivate")]
+        public async Task<ActionResult<UserResponse>> Reactivate(string id)
+        {
+            var user = await _collection
+                .Find(x => x.Id == id && x.Role != "Admin")
+                .FirstOrDefaultAsync();
+
+            if (user is null)
+                return NotFound(Message.NotFound("Người dùng"));
+
+            await _collection.UpdateOneAsync(
+                x => x.Id == id,
+                Builders<User>.Update
+                    .Set(x => x.IsActive, true)
+                    .Set(x => x.UpdatedAt, DateTime.UtcNow));
+
+            user.IsActive = true;
+
+            return Ok(await MapToResponseAsync(user));
+        }
+
         // ==================== HELPERS ====================
         private async Task<UserResponse> MapToResponseAsync(User user)
         {
