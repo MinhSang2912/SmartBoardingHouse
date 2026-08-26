@@ -1,4 +1,4 @@
-﻿
+
 using static SmartBoardingHouse.Common.Enums;
 
 namespace SmartBoardingHouse.Models.Response
@@ -7,6 +7,7 @@ namespace SmartBoardingHouse.Models.Response
     {
         public int TotalRooms { get; set; }
         public int RentedRooms { get; set; }
+        public int InactiveRooms { get; set; }
         public decimal MonthlyRevenue { get; set; }
         public int UnpaidInvoices { get; set; }
         public List<RevenueChartDto> RevenueLast6Months { get; set; } = new();

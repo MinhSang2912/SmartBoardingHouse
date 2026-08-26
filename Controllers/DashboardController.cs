@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using SmartBoardingHouse.Models.Response;
 using SmartBoardingHouse.Data;
@@ -32,10 +32,12 @@ namespace SmartBoardingHouse.Controllers
             var dto = new DashboardResponse();
 
             // Thống kê phòng
-            var totalRooms = await _roomCollection.CountDocumentsAsync(x=>x.IsActive);
-            var rentedRooms = await _roomCollection.CountDocumentsAsync(r => r.Status == RoomStatus.Occupied);
+            var totalRooms = await _roomCollection.CountDocumentsAsync(_ => true);
+            var rentedRooms = await _roomCollection.CountDocumentsAsync(r => r.IsActive && r.Status == RoomStatus.Occupied);
+            var inactiveRooms = await _roomCollection.CountDocumentsAsync(r => !r.IsActive || r.Status == RoomStatus.InActive);
             dto.TotalRooms = (int)totalRooms;
             dto.RentedRooms = (int)rentedRooms;
+            dto.InactiveRooms = (int)inactiveRooms;
 
             var now = DateTime.Now;
             var currentMonth = now.Month;
@@ -112,6 +114,20 @@ namespace SmartBoardingHouse.Controllers
             }).ToList();
 
             return Ok(dto);
+        }
+
+        // GET: api/Dashboard/revenue
+        [HttpGet("revenue")]
+        public async Task<ActionResult<decimal>> GetRevenue([FromQuery] int month, [FromQuery] int year)
+        {
+            var revenueResult = await _invoiceCollection.Aggregate()
+                .Match(i => i.Status == InvoiceStatus.Paid
+                         && i.BillingMonth == month
+                         && i.BillingYear == year)
+                .Group(i => 1, g => new { Total = g.Sum(i => i.Amount) })
+                .FirstOrDefaultAsync();
+
+            return Ok(revenueResult?.Total ?? 0m);
         }
 
         // ==================== HELPERS ====================
