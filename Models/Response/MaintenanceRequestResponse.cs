@@ -16,6 +16,7 @@ namespace SmartBoardingHouse.Models.Response
         public string StatusLabel { get; set; } = string.Empty;
         public List<string> Images { get; set; } = new();
         public DateTime CreatedAt { get; set; }
+        public string? AdminNote { get; set; }
     }
 
     // Dùng cho thống kê 

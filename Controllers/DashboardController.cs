@@ -59,6 +59,16 @@ namespace SmartBoardingHouse.Controllers
             dto.UnpaidInvoices = (int)await _invoiceCollection
                 .CountDocumentsAsync(i => i.Status == InvoiceStatus.Unpaid);
 
+            // Hóa đơn đã thanh toán tháng này
+            dto.PaidInvoices = (int)await _invoiceCollection.CountDocumentsAsync(
+                i => i.Status == InvoiceStatus.Paid
+                  && i.BillingMonth == currentMonth
+                  && i.BillingYear == currentYear);
+
+            // Hóa đơn đang xử lý
+            dto.PendingInvoices = (int)await _invoiceCollection.CountDocumentsAsync(
+                i => i.Status == InvoiceStatus.Pending);
+
             // Doanh thu 6 tháng gần đây (theo kỳ hóa đơn)
             var sixMonthsAgo = new DateTime(currentYear, currentMonth, 1).AddMonths(-5);
 

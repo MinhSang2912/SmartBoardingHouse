@@ -53,6 +53,8 @@ namespace SmartBoardingHouse.Controllers
                 int l = limit.Value < 1 ? 10 : limit.Value;
                 var total = await _collection.CountDocumentsAsync(_ => true);
                 var readings = await _collection.Find(_ => true)
+                    .SortByDescending(x => x.Year)
+                    .ThenByDescending(x => x.Month)
                     .Skip((p - 1) * l)
                     .Limit(l)
                     .ToListAsync();
@@ -69,6 +71,8 @@ namespace SmartBoardingHouse.Controllers
             {
                 var readings = await _collection
                     .Find(_ => true)
+                    .SortByDescending(x => x.Year)
+                    .ThenByDescending(x => x.Month)
                     .ToListAsync();
                 return Ok(await MapToResponseListAsync(readings));
             }

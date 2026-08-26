@@ -10,6 +10,8 @@ namespace SmartBoardingHouse.Models.Response
         public int InactiveRooms { get; set; }
         public decimal MonthlyRevenue { get; set; }
         public int UnpaidInvoices { get; set; }
+        public int PaidInvoices { get; set; }
+        public int PendingInvoices { get; set; }
         public List<RevenueChartDto> RevenueLast6Months { get; set; } = new();
         public List<RecentActivityResponse> RecentActivities { get; set; } = new();
     }
