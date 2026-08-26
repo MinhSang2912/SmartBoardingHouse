@@ -53,37 +53,50 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet]
         public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
+            // 1. Fetch contracts
+            List<Contract> contracts;
+            int total = 0;
             if (page.HasValue && limit.HasValue)
             {
                 int p = page.Value < 1 ? 1 : page.Value;
                 int l = limit.Value < 1 ? 10 : limit.Value;
-                var total = await _contractCollection.CountDocumentsAsync(_ => true);
-                var contracts = await _contractCollection.Find(_ => true)
+                total = (int)await _contractCollection.CountDocumentsAsync(_ => true);
+                contracts = await _contractCollection.Find(_ => true)
                     .Skip((p - 1) * l)
                     .Limit(l)
                     .ToListAsync();
-                var result = new List<ContractResponse>();
-                foreach (var contract in contracts)
-                {
-                    result.Add(await MapToResponseAsync(contract));
-                }
+            }
+            else
+            {
+                contracts = await _contractCollection.Find(_ => true).ToListAsync();
+                total = contracts.Count;
+            }
+
+            // 2. Bulk load related rooms and users to solve N+1 queries
+            var roomIds = contracts.Select(c => c.RoomId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+            var tenantIds = contracts.Select(c => c.TenantId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+
+            var rooms = await _roomCollection.Find(r => roomIds.Contains(r.Id)).ToListAsync();
+            var users = await _userCollection.Find(u => tenantIds.Contains(u.Id)).ToListAsync();
+
+            var roomDict = rooms.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First());
+            var userDict = users.GroupBy(u => u.Id).ToDictionary(g => g.Key, g => g.First());
+
+            var responses = contracts.Select(contract => MapToResponse(contract, roomDict, userDict)).ToList();
+
+            if (page.HasValue && limit.HasValue)
+            {
                 return Ok(new PagedResult<ContractResponse>
                 {
-                    Total = (int)total,
-                    Page = p,
-                    Limit = l,
-                    Items = result
+                    Total = total,
+                    Page = page.Value,
+                    Limit = limit.Value,
+                    Items = responses
                 });
             }
             else
             {
-                var contracts = await _contractCollection.Find(_ => true).ToListAsync();
-                var result = new List<ContractResponse>();
-                foreach (var contract in contracts)
-                {
-                    result.Add(await MapToResponseAsync(contract));
-                }
-                return Ok(result);
+                return Ok(responses);
             }
         }
 
@@ -312,6 +325,34 @@ namespace SmartBoardingHouse.Controllers
         {
             var result = await _validator.ValidateAsync(request);
             return result.Errors.Select(e => e.ErrorMessage).ToList();
+        }
+
+        private ContractResponse MapToResponse(Contract contract, Dictionary<string, Room> roomDict, Dictionary<string, User> userDict)
+        {
+            var response = _mapper.Map<ContractResponse>(contract);
+
+            if (!string.IsNullOrEmpty(contract.RoomId) && roomDict.TryGetValue(contract.RoomId, out var room))
+            {
+                response.RoomNumber = room.RoomNumber;
+            }
+
+            if (!string.IsNullOrEmpty(contract.TenantId) && userDict.TryGetValue(contract.TenantId, out var tenant))
+            {
+                response.TenantName = tenant.Name;
+            }
+
+            response.StatusLabel = contract.Status switch
+            {
+                ContractStatus.Active => "Đang hiệu lực",
+                ContractStatus.Expired => "Hết hạn",
+                ContractStatus.Terminated => "Đã chấm dứt",
+                _ => contract.Status.ToString()
+            };
+
+            response.PaymentDateLabel = $"Ngày {contract.PaymentDate} hàng tháng";
+            response.RemainTime = contract.RemainTime;
+
+            return response;
         }
 
         private async Task<ContractResponse> MapToResponseAsync(Contract contract)

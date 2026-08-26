@@ -45,38 +45,106 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet]
         public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
+            var floors = await _floorCollection.Find(_ => true).ToListAsync();
+            var users = await _userCollection.Find(u => u.Role != "Admin").ToListAsync();
+            var itemFees = await _itemFeeCollection.Find(f => f.IsActive).ToListAsync();
+            var activeContracts = await _contractCollection.Find(c => c.Status == ContractStatus.Active).ToListAsync();
+
+            var floorDict = floors.GroupBy(f => f.Id).ToDictionary(g => g.Key, g => g.First());
+            var userDict = users.GroupBy(u => u.Id).ToDictionary(g => g.Key, g => g.First());
+            var itemFeeDict = itemFees.GroupBy(f => f.Type).ToDictionary(g => g.Key, g => g.First());
+            var contractDict = activeContracts.GroupBy(c => c.RoomId).ToDictionary(g => g.Key, g => g.First());
+
+            List<Room> rooms;
+            int total;
+
             if (page.HasValue && limit.HasValue)
             {
                 int p = page.Value < 1 ? 1 : page.Value;
                 int l = limit.Value < 1 ? 10 : limit.Value;
-                var total = await _collection.CountDocumentsAsync(_ => true);
-                var rooms = await _collection.Find(_ => true)
+                total = (int)await _collection.CountDocumentsAsync(_ => true);
+                rooms = await _collection.Find(_ => true)
                     .Skip((p - 1) * l)
                     .Limit(l)
                     .ToListAsync();
-                var result = new List<RoomResponse>();
-                foreach (var room in rooms)
-                {
-                    result.Add(await MapToResponseAsync(room));
-                }
+            }
+            else
+            {
+                rooms = await _collection.Find(_ => true).ToListAsync();
+                total = rooms.Count;
+            }
+
+            var result = rooms.Select(room => MapToResponse(room, floorDict, userDict, itemFeeDict, contractDict)).ToList();
+
+            if (page.HasValue && limit.HasValue)
+            {
                 return Ok(new PagedResult<RoomResponse>
                 {
-                    Total = (int)total,
-                    Page = p,
-                    Limit = l,
+                    Total = total,
+                    Page = page.Value,
+                    Limit = limit.Value,
                     Items = result
                 });
             }
             else
             {
-                var rooms = await _collection.Find(_=>true).ToListAsync();
-                var result = new List<RoomResponse>();
-                foreach (var room in rooms)
-                {
-                    result.Add(await MapToResponseAsync(room));
-                }
                 return Ok(result);
             }
+        }
+
+        // GET: api/Rooms/manage-init
+        [HttpGet("manage-init")]
+        public async Task<ActionResult> GetManageInitData()
+        {
+            // 1. Bulk load metadata
+            var floors = await _floorCollection.Find(_ => true).ToListAsync();
+            var users = await _userCollection.Find(u => u.Role != "Admin").ToListAsync();
+            var itemFees = await _itemFeeCollection.Find(f => f.IsActive).ToListAsync();
+            var activeContracts = await _contractCollection.Find(c => c.Status == ContractStatus.Active).ToListAsync();
+
+            var floorDict = floors.GroupBy(f => f.Id).ToDictionary(g => g.Key, g => g.First());
+            var userDict = users.GroupBy(u => u.Id).ToDictionary(g => g.Key, g => g.First());
+            var itemFeeDict = itemFees.GroupBy(f => f.Type).ToDictionary(g => g.Key, g => g.First());
+            var contractDict = activeContracts.GroupBy(c => c.RoomId).ToDictionary(g => g.Key, g => g.First());
+
+            // 2. Query Rooms
+            var rooms = await _collection.Find(_ => true).ToListAsync();
+            var roomResponses = rooms.Select(room => MapToResponse(room, floorDict, userDict, itemFeeDict, contractDict)).ToList();
+
+            // 3. Format floor list for response
+            var floorResponses = floors.Select(floor =>
+            {
+                var activeRooms = rooms.Where(r => r.IsActive).ToList();
+                var roomsOnFloor = activeRooms.Where(r => r.FloorId == floor.Id).ToList();
+                var occupiedRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Occupied);
+                var emptyRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Available);
+
+                return new FloorItemResponse
+                {
+                    Id = floor.Id,
+                    FloorNumber = floor.FloorNumber,
+                    Name = floor.Name,
+                    Description = floor.Description,
+                    RoomCount = roomsOnFloor.Count,
+                    OccupiedRooms = occupiedRooms,
+                    EmptyRooms = emptyRooms,
+                    RevenueOnFloor = roomsOnFloor
+                        .Where(r => r.Status == RoomStatus.Occupied)
+                        .Sum(r => r.Price)
+                };
+            }).ToList();
+
+            var tenantResponses = users.Select(_mapper.Map<UserResponse>).ToList();
+            var filteredItemFees = itemFees.Where(f => f.Type != "mandatory").ToList();
+            var itemFeeResponses = _mapper.Map<List<ItemFeeResponse>>(filteredItemFees);
+
+            return Ok(new
+            {
+                Rooms = roomResponses,
+                Floors = floorResponses,
+                Tenants = tenantResponses,
+                ItemFees = itemFeeResponses
+            });
         }
 
         // GET: api/Rooms/{id}
@@ -87,7 +155,7 @@ namespace SmartBoardingHouse.Controllers
             if (room is null)
                 return NotFound(CommonMessage.NotFound("Phòng"));
 
-            return Ok(await MapToResponseAsync(room));
+            return Ok(await MapToResponse(room));
         }
 
         // POST: api/Rooms
@@ -132,7 +200,7 @@ namespace SmartBoardingHouse.Controllers
 
                 await _collection.ReplaceOneAsync(x => x.Id == existingRoom.Id, existingRoom);
 
-                return Ok(await MapToResponseAsync(existingRoom));
+                return Ok(await MapToResponse(existingRoom));
             }
 
             // Nếu chưa tồn tại hoàn toàn thì thực hiện thêm mới (Insert) như bình thường
@@ -143,7 +211,7 @@ namespace SmartBoardingHouse.Controllers
             await _collection.InsertOneAsync(room);
 
             return CreatedAtAction(nameof(GetById), new { id = room.Id },
-                await MapToResponseAsync(room));
+                await MapToResponse(room));
         }
 
         // PUT: api/Rooms/{id}
@@ -176,7 +244,7 @@ namespace SmartBoardingHouse.Controllers
 
             await _collection.ReplaceOneAsync(x => x.Id == id, existingRoom);
 
-            return Ok(await MapToResponseAsync(existingRoom));
+            return Ok(await MapToResponse(existingRoom));
         }
 
         // DELETE: api/Rooms/{id}
@@ -222,10 +290,72 @@ namespace SmartBoardingHouse.Controllers
             room.IsActive = true;
             room.Status = RoomStatus.Available;
 
-            return Ok(await MapToResponseAsync(room));
+            return Ok(await MapToResponse(room));
         }
 
         // ==================== HELPERS ====================
+
+        private RoomResponse MapToResponse(
+            Room room,
+            Dictionary<string, Floor> floorDict,
+            Dictionary<string, User> userDict,
+            Dictionary<string, ItemFee> itemFeeDict,
+            Dictionary<string, Contract> contractDict)
+        {
+            var response = _mapper.Map<RoomResponse>(room);
+
+            if (room.Amenities != null && room.Amenities.Any())
+            {
+                response.Amenities = room.Amenities
+                    .Select(type => itemFeeDict.TryGetValue(type, out var fee) ? fee : null)
+                    .Where(fee => fee != null)
+                    .Select(fee => new RoomAmenityResponse
+                    {
+                        Name = fee!.Name,
+                        Price = fee.Price,
+                        Unit = fee.Unit,
+                        Type = fee.Type
+                    }).ToList();
+            }
+
+            if (!string.IsNullOrEmpty(room.FloorId) && floorDict.TryGetValue(room.FloorId, out var floor))
+            {
+                response.FloorNumber = floor.FloorNumber;
+            }
+
+            if (!room.IsActive)
+            {
+                response.StatusLabel = "Không hoạt động";
+            }
+            else
+            {
+                response.StatusLabel = room.Status switch
+                {
+                    RoomStatus.Available => "Trống",
+                    RoomStatus.Occupied => "Đã thuê",
+                    RoomStatus.InActive => "Không hoạt động",
+                    _ => room.Status.ToString()
+                };
+            }
+
+            if (!string.IsNullOrEmpty(room.TenantId) && userDict.TryGetValue(room.TenantId, out var tenant))
+            {
+                response.TenantName = tenant.Name;
+            }
+            else if (contractDict.TryGetValue(room.Id, out var activeContract))
+            {
+                if (!string.IsNullOrEmpty(activeContract.TenantId) && userDict.TryGetValue(activeContract.TenantId, out var tenantFromContract))
+                {
+                    response.TenantName = tenantFromContract.Name;
+                }
+                else
+                {
+                    response.TenantName = activeContract.TenantName;
+                }
+            }
+
+            return response;
+        }
 
         private async Task<List<string>> ValidateRequest(RoomRequest request)
         {
@@ -233,7 +363,7 @@ namespace SmartBoardingHouse.Controllers
             return validationResult.Errors.Select(e => e.ErrorMessage).ToList();
         }
 
-        private async Task<RoomResponse> MapToResponseAsync(Room room)
+        private async Task<RoomResponse> MapToResponse(Room room)
         {
             var response = _mapper.Map<RoomResponse>(room);
 

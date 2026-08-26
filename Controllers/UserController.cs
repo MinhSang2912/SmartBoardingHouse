@@ -53,37 +53,84 @@ namespace SmartBoardingHouse.Controllers
         [HttpGet]
         public async Task<ActionResult> GetAll([FromQuery] int? page = null, [FromQuery] int? limit = null)
         {
+            // 1. Fetch users
+            List<User> users;
+            int total = 0;
             if (page.HasValue && limit.HasValue)
             {
                 int p = page.Value < 1 ? 1 : page.Value;
                 int l = limit.Value < 1 ? 10 : limit.Value;
-                var total = await _collection.CountDocumentsAsync(x => x.Role != "Admin");
-                var users = await _collection.Find(x => x.Role != "Admin")
+                total = (int)await _collection.CountDocumentsAsync(x => x.Role != "Admin");
+                users = await _collection.Find(x => x.Role != "Admin")
                     .Skip((p - 1) * l)
                     .Limit(l)
                     .ToListAsync();
-                var result = new List<UserResponse>();
-                foreach (var user in users)
+            }
+            else
+            {
+                users = await _collection.Find(x => x.Role != "Admin").ToListAsync();
+                total = users.Count;
+            }
+
+            // 2. Bulk load active contracts and rooms to solve N+1 queries
+            var userIds = users.Select(u => u.Id).ToList();
+            var activeContracts = await _contractCollection
+                .Find(c => userIds.Contains(c.TenantId) && c.Status == ContractStatus.Active)
+                .ToListAsync();
+
+            var roomIds = activeContracts.Select(c => c.RoomId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+            var rooms = await _roomCollection.Find(r => roomIds.Contains(r.Id)).ToListAsync();
+
+            var roomDict = rooms.GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First());
+            var contractGroup = activeContracts.GroupBy(c => c.TenantId).ToDictionary(g => g.Key, g => g.ToList());
+
+            var responses = users.Select(user =>
+            {
+                var response = _mapper.Map<UserResponse>(user);
+
+                if (contractGroup.TryGetValue(user.Id, out var userContracts))
                 {
-                    result.Add(await MapToResponseAsync(user));
+                    var uRoomIds = userContracts.Select(c => c.RoomId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+                    var uRooms = uRoomIds
+                        .Select(rid => roomDict.TryGetValue(rid, out var rm) ? rm : null)
+                        .Where(rm => rm != null)
+                        .ToList();
+
+                    response.ActiveRoomIds = uRooms.Select(r => r!.Id).ToList();
+                    response.ActiveRoomNumbers = uRooms
+                        .Select(r => r!.RoomNumber)
+                        .Where(n => !string.IsNullOrEmpty(n))
+                        .ToList();
+
+                    response.ActiveRoomCount = response.ActiveRoomNumbers.Count;
+                    response.RoomNumber = response.ActiveRoomCount > 0
+                        ? string.Join(", ", response.ActiveRoomNumbers)
+                        : "Chưa có phòng";
                 }
+                else
+                {
+                    response.ActiveRoomCount = 0;
+                    response.ActiveRoomNumbers = new List<string>();
+                    response.ActiveRoomIds = new List<string>();
+                    response.RoomNumber = "Chưa có phòng";
+                }
+
+                return response;
+            }).ToList();
+
+            if (page.HasValue && limit.HasValue)
+            {
                 return Ok(new PagedResult<UserResponse>
                 {
-                    Total = (int)total,
-                    Page = p,
-                    Limit = l,
-                    Items = result
+                    Total = total,
+                    Page = page.Value,
+                    Limit = limit.Value,
+                    Items = responses
                 });
             }
             else
             {
-                var users = await _collection.Find(x => x.Role != "Admin").ToListAsync();
-                var result = new List<UserResponse>();
-                foreach (var user in users)
-                {
-                    result.Add(await MapToResponseAsync(user));
-                }
-                return Ok(result);
+                return Ok(responses);
             }
         }
 

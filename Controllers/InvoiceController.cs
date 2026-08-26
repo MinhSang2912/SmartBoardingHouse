@@ -48,11 +48,79 @@ namespace SmartBoardingHouse.Controllers
 
         // GET: api/Invoices
         [HttpGet]
-        public async Task<ActionResult<List<InvoiceResponse>>> GetAll()
+        public async Task<ActionResult> GetAll(
+            [FromQuery] int? page = null, 
+            [FromQuery] int? limit = null,
+            [FromQuery] string sort = "desc")
         {
-            var invoices = await _collection.Find(_ => true).ToListAsync();
-            var responses = await Task.WhenAll(invoices.Select(MapToResponse));
-            return Ok(responses.ToList());
+            var isAsc = sort?.ToLower() == "asc";
+            var sortDef = isAsc 
+                ? Builders<Invoice>.Sort.Ascending(i => i.DueDate)
+                : Builders<Invoice>.Sort.Descending(i => i.DueDate);
+
+            // 1. Fetch invoices (Default sort based on parameter)
+            List<Invoice> invoices;
+            int total = 0;
+            if (page.HasValue && limit.HasValue)
+            {
+                int p = page.Value < 1 ? 1 : page.Value;
+                int l = limit.Value < 1 ? 10 : limit.Value;
+                total = (int)await _collection.CountDocumentsAsync(_ => true);
+                invoices = await _collection.Find(_ => true)
+                    .Sort(sortDef)
+                    .Skip((p - 1) * l)
+                    .Limit(l)
+                    .ToListAsync();
+            }
+            else
+            {
+                invoices = await _collection.Find(_ => true)
+                    .Sort(sortDef)
+                    .ToListAsync();
+                total = invoices.Count;
+            }
+
+            // 2. Load all rooms and users to memory for lookup to solve N+1 queries
+            var roomIds = invoices.Select(i => i.RoomId).Distinct().ToList();
+            var tenantIds = invoices.Select(i => i.TenantId).Distinct().ToList();
+
+            var rooms = await _roomCollection.Find(r => roomIds.Contains(r.Id)).ToListAsync();
+            var users = await _userCollection.Find(u => tenantIds.Contains(u.Id)).ToListAsync();
+
+            var roomDict = rooms.ToDictionary(r => r.Id);
+            var userDict = users.ToDictionary(u => u.Id);
+
+            var responses = invoices.Select(invoice => MapToResponse(invoice, roomDict, userDict)).ToList();
+
+            // 3. Count statuses across ALL invoices (not just current page)
+            int pendingCount = (int)await _collection.CountDocumentsAsync(i => i.Status == InvoiceStatus.Pending);
+            int paidCount = (int)await _collection.CountDocumentsAsync(i => i.Status == InvoiceStatus.Paid);
+            int cancelledCount = (int)await _collection.CountDocumentsAsync(i => i.Status == InvoiceStatus.Cancelled);
+            int unpaidCount = (int)await _collection.CountDocumentsAsync(i => i.Status == InvoiceStatus.Unpaid);
+
+            var counts = new Dictionary<string, int>
+            {
+                { "pending", pendingCount },
+                { "paid", paidCount },
+                { "cancelled", cancelledCount },
+                { "unpaid", unpaidCount }
+            };
+
+            if (page.HasValue && limit.HasValue)
+            {
+                return Ok(new
+                {
+                    Total = total,
+                    Page = page.Value,
+                    Limit = limit.Value,
+                    Counts = counts,
+                    Items = responses
+                });
+            }
+            else
+            {
+                return Ok(responses);
+            }
         }
 
         // GET: api/Invoices/{id}
@@ -303,6 +371,47 @@ namespace SmartBoardingHouse.Controllers
         {
             var result = await _validator.ValidateAsync(request);
             return result.Errors.Select(e => e.ErrorMessage).ToList();
+        }
+
+        private InvoiceResponse MapToResponse(Invoice invoice, Dictionary<string, Room> roomDict, Dictionary<string, User> userDict)
+        {
+            var response = _mapper.Map<InvoiceResponse>(invoice);
+            response.ElectricTotal = (decimal)response.ElectricUsage * response.ElectricPrice;
+            response.WaterTotal = (decimal)response.WaterUsage * response.WaterPrice;
+
+            response.Status = invoice.Status;
+            response.StatusLabel = invoice.Status switch
+            {
+                InvoiceStatus.Paid => "Đã thanh toán",
+                InvoiceStatus.Unpaid => "Chờ thanh toán",
+                InvoiceStatus.Pending => "Đang xử lý",
+                InvoiceStatus.Cancelled => "Đã hủy",
+                _ => invoice.Status.ToString()
+            };
+            response.BillingPeriod = "Tháng " + invoice.BillingMonth + "/" + invoice.BillingYear;
+
+            if (roomDict.TryGetValue(invoice.RoomId, out var room))
+            {
+                response.RoomNumber = room.RoomNumber;
+                response.RoomDeposit = invoice.RoomDeposit > 0 ? invoice.RoomDeposit : room.RoomDeposit;
+            }
+            else
+            {
+                response.RoomNumber = "Không tìm thấy";
+                response.RoomDeposit = invoice.RoomDeposit;
+            }
+            response.Type = invoice.Type;
+
+            if (userDict.TryGetValue(invoice.TenantId, out var tenant))
+            {
+                response.TenantName = tenant.Name;
+            }
+            else
+            {
+                response.TenantName = "Không tìm thấy";
+            }
+
+            return response;
         }
 
         private async Task<InvoiceResponse> MapToResponse(Invoice invoice)

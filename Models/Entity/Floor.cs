@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MongoDB.Bson.Serialization.Attributes;
 using SmartBoardingHouse.Common;
 
@@ -17,5 +17,8 @@ namespace SmartBoardingHouse.Models.Entity
 
         [BsonElement("description")]
         public string? Description { get; set; }
+
+        [BsonElement("isActive")]
+        public bool IsActive { get; set; } = true;
     }
 }

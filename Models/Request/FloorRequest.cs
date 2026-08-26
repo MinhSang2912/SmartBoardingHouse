@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using SmartBoardingHouse.Common;
 
 namespace SmartBoardingHouse.Models.Request
@@ -8,6 +8,7 @@ namespace SmartBoardingHouse.Models.Request
         public string Name { get; set; } = string.Empty;
         public int FloorNumber { get; set; }
         public string? Description { get; set; }
+        public bool IsActive { get; set; } = true;
     }
     public class FloorRequestValidation : AbstractValidator<FloorRequest>
     {

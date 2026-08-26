@@ -35,34 +35,36 @@ namespace SmartBoardingHouse.Controllers
         public async Task<ActionResult<FloorResponse>> GetAll()
         {
             var floors = await _floorCollection.Find(_ => true).ToListAsync();
-            var rooms = await _roomCollection.Find(x=>x.IsActive).ToListAsync();
+            var rooms = await _roomCollection.Find(_ => true).ToListAsync();
 
             var floorItems = floors.Select(floor =>
             {
                 var roomsOnFloor = rooms.Where(r => r.FloorId == floor.Id).ToList();
+                var activeRoomsOnFloor = roomsOnFloor.Where(r => r.IsActive && r.Status != RoomStatus.InActive).ToList();
+                var inactiveRoomsOnFloor = roomsOnFloor.Where(r => !r.IsActive || r.Status == RoomStatus.InActive).ToList();
 
-                var occupiedRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Occupied);
-                var emptyRooms = roomsOnFloor.Count(r => r.Status == RoomStatus.Available);
+                var occupiedRooms = activeRoomsOnFloor.Count(r => r.Status == RoomStatus.Occupied);
+                var emptyRooms = activeRoomsOnFloor.Count(r => r.Status == RoomStatus.Available);
 
-                return new FloorItemResponse
-                {
-                    Id = floor.Id,
-                    FloorNumber = floor.FloorNumber,
-                    Name = floor.Name,
-                    Description = floor.Description,
-                    RoomCount = roomsOnFloor.Count,
-                    OccupiedRooms = occupiedRooms,
-                    EmptyRooms = emptyRooms,
-                    RevenueOnFloor = roomsOnFloor
-                        .Where(r => r.Status == RoomStatus.Occupied)
-                        .Sum(r => r.Price)
-                };
+                var item = _mapper.Map<FloorItemResponse>(floor);
+                item.RoomCount = roomsOnFloor.Count;
+                item.ActiveRooms = activeRoomsOnFloor.Count;
+                item.InactiveRooms = inactiveRoomsOnFloor.Count;
+                item.OccupiedRooms = occupiedRooms;
+                item.EmptyRooms = emptyRooms;
+                item.RevenueOnFloor = activeRoomsOnFloor
+                    .Where(r => r.Status == RoomStatus.Occupied)
+                    .Sum(r => r.Price);
+
+                return item;
             }).ToList();
 
             var response = new FloorResponse
             {
                 TotalFloors = floors.Count,
                 TotalRooms = rooms.Count,
+                TotalActiveRooms = rooms.Count(r => r.IsActive && r.Status != RoomStatus.InActive),
+                TotalInactiveRooms = rooms.Count(r => !r.IsActive || r.Status == RoomStatus.InActive),
                 MonthlyRevenue = floorItems.Sum(f => f.RevenueOnFloor),
                 Floors = floorItems
             };

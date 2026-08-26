@@ -13,7 +13,6 @@ using SmartBoardingHouse.Common;
 using SmartBoardingHouse.Data;
 using SmartBoardingHouse.Mappings;
 using SmartBoardingHouse.Models.Entity;
-using SmartBoardingHouse.Models.Mapper;
 using SmartBoardingHouse.Models.Request;
 using SmartBoardingHouse.Models.Settings;
 using SmartBoardingHouse.Service;
@@ -95,7 +94,7 @@ builder.Services.AddScoped<IValidator<MaintenanceRequestRequest>, MaintenanceReq
 builder.Services.AddScoped<IValidator<MeterReadingRequest>, MeterReadingRequestValidation>();
 builder.Services.AddScoped<IValidator<RoomRequest>, RoomRequestValidation>();
 builder.Services.AddScoped<IValidator<UserRequest>, UserRequestValidation>();
-builder.Services.AddScoped<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
+            // builder.Services.AddScoped<IValidator<SendMessageRequest>, SendMessageRequestValidator>();
 builder.Services.AddScoped<IValidator<NotificationRequest>, NotificationRequestValidator>();
 builder.Services.AddScoped<IValidator<ItemFeeRequest>, ItemFeeRequestValidator>();
 
@@ -109,7 +108,7 @@ var mapperConfig = new MapperConfiguration(cfg =>
     cfg.AddProfile<InvoiceMappingProfile>();
     cfg.AddProfile<MeterReadingMappingProfile>();
     cfg.AddProfile<MaintenanceMappingProfile>();
-    cfg.AddProfile<MessageMappingProfile>();
+    // cfg.AddProfile<MessageMappingProfile>();
     cfg.AddProfile<NotificationMappingProfile>();
     cfg.AddProfile<ItemFeeMappingProfile>();
 }, NullLoggerFactory.Instance);
